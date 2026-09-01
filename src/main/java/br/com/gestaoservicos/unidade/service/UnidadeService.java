@@ -1,0 +1,37 @@
+package br.com.gestaoservicos.unidade.service;
+
+import br.com.gestaoservicos.associacao.model.Associacao;
+import br.com.gestaoservicos.associacao.model.Perfil;
+import br.com.gestaoservicos.associacao.repository.AssociacaoRepository;
+import br.com.gestaoservicos.unidade.dto.UnidadeResponseDTO;
+import br.com.gestaoservicos.unidade.model.Unidade;
+import br.com.gestaoservicos.unidade.repository.UnidadeRepository;
+import br.com.gestaoservicos.usuario.repository.UsuarioRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.UUID;
+
+@Service
+public class UnidadeService {
+    private final UnidadeRepository unidades;
+    private final UsuarioRepository usuarios;
+    private final AssociacaoRepository associacoes;
+
+    public UnidadeService(UnidadeRepository unidades, UsuarioRepository usuarios, AssociacaoRepository associacoes) {
+        this.unidades = unidades;
+        this.usuarios = usuarios;
+        this.associacoes = associacoes;
+    }
+
+    @Transactional
+    public UnidadeResponseDTO criarComAdministrador(UUID usuarioId, String nome) {
+        var usuario = usuarios.findById(usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuário não encontrado"));
+        Unidade unidade = unidades.save(new Unidade(nome.trim()));
+        associacoes.save(new Associacao(usuario, unidade, Perfil.ADMIN));
+        return UnidadeResponseDTO.de(unidade, Perfil.ADMIN);
+    }
+}
