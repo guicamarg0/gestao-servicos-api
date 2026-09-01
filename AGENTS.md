@@ -13,6 +13,7 @@ Este repositório contém a API do novo sistema Gestão de Serviços. O sistema 
 5. Executar as verificações disponíveis antes de concluir.
 6. Registrar decisões, riscos e pendências no resultado da tarefa.
 7. Nunca expor segredos, senhas ou tokens no código, commits ou logs.
+8. Ao concluir alterações solicitadas, fazer push da branch de trabalho para o `origin`, salvo instrução contrária do usuário.
 
 ## Papéis
 
