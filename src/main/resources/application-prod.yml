@@ -1,0 +1,8 @@
+app:
+  jwt:
+    segredo: ${JWT_SECRET}
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
