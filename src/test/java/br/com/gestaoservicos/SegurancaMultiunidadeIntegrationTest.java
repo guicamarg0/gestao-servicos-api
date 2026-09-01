@@ -70,6 +70,16 @@ class SegurancaMultiunidadeIntegrationTest {
                 .andExpect(status().isCreated());
     }
 
+    @Test
+    void permitePreflightDoFrontendLocalNaPorta3000() throws Exception {
+        mvc.perform(options("/api/v1/autenticacao/login")
+                        .header("Origin", "http://localhost:3000")
+                        .header("Access-Control-Request-Method", "POST"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"))
+                .andExpect(header().string("Access-Control-Allow-Methods", org.hamcrest.Matchers.containsString("POST")));
+    }
+
     private String cadastrarEAutenticar(String nome, String email) throws Exception {
         mvc.perform(post("/api/v1/autenticacao/cadastro")
                         .contentType(MediaType.APPLICATION_JSON)

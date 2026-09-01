@@ -28,11 +28,14 @@ import java.util.List;
 @EnableConfigurationProperties(PropriedadesJwt.class)
 public class ConfiguracaoSeguranca {
     @Bean
-    SecurityFilterChain cadeiaFiltrosSeguranca(HttpSecurity http, FiltroContextoUnidade filtroContextoUnidade)
+    SecurityFilterChain cadeiaFiltrosSeguranca(
+            HttpSecurity http,
+            FiltroContextoUnidade filtroContextoUnidade,
+            CorsConfigurationSource fonteConfiguracaoCors)
             throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> {})
+                .cors(cors -> cors.configurationSource(fonteConfiguracaoCors))
                 .sessionManagement(sessao -> sessao.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(autorizacao -> autorizacao
                         .requestMatchers(HttpMethod.POST,
@@ -61,7 +64,7 @@ public class ConfiguracaoSeguranca {
 
     @Bean
     CorsConfigurationSource fonteConfiguracaoCors(
-            @Value("${app.cors.origensPermitidas:http://localhost:4200}") List<String> origensPermitidas) {
+            @Value("${app.cors.origensPermitidas:http://localhost:3000}") List<String> origensPermitidas) {
         CorsConfiguration configuracao = new CorsConfiguration();
         configuracao.setAllowedOrigins(origensPermitidas);
         configuracao.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));

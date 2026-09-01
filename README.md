@@ -24,6 +24,8 @@ mvn spring-boot:run
 
 Os valores locais funcionam sem arquivo adicional. Para personalizá-los, exporte as variáveis de `.env.example` antes de iniciar. O segredo JWT padrão existe somente para desenvolvimento; o perfil `prod` exige `JWT_SECRET`, `DB_URL`, `DB_USER` e `DB_PASSWORD`.
 
+O CORS local permite, por padrão, o front-end em `http://localhost:3000`. Use `CORS_ALLOWED_ORIGINS` para configurar uma ou mais origens em outros ambientes.
+
 ## Verificações
 
 ```powershell
