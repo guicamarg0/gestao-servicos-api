@@ -52,6 +52,7 @@ public class AssociacaoService {
 
     @Transactional
     public UsuarioUnidadeResponseDTO alterarPerfil(UUID unidadeId, UUID associacaoId, Perfil perfil) {
+        bloquearUnidade(unidadeId);
         var associacao = obterAtiva(unidadeId, associacaoId);
         validarNaoRemoveUltimoAdmin(unidadeId, associacao.getPerfil(), perfil);
         associacao.alterarPerfil(perfil);
@@ -60,6 +61,7 @@ public class AssociacaoService {
 
     @Transactional
     public void desativar(UUID unidadeId, UUID associacaoId) {
+        bloquearUnidade(unidadeId);
         var associacao = obterAtiva(unidadeId, associacaoId);
         validarNaoRemoveUltimoAdmin(unidadeId, associacao.getPerfil(), null);
         associacao.desativar();
@@ -68,6 +70,11 @@ public class AssociacaoService {
     private Associacao obterAtiva(UUID unidadeId, UUID associacaoId) {
         return associacoes.findByIdAndUnidadeIdAndAtivaTrue(associacaoId, unidadeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado nesta unidade"));
+    }
+
+    private void bloquearUnidade(UUID unidadeId) {
+        unidades.findByIdComBloqueio(unidadeId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Unidade não encontrada"));
     }
 
     private void validarNaoRemoveUltimoAdmin(UUID unidadeId, Perfil perfilAtual, Perfil novoPerfil) {

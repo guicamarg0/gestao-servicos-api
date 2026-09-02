@@ -67,7 +67,7 @@ public class ConfiguracaoSeguranca {
             @Value("${app.cors.origensPermitidas:http://localhost:3000}") List<String> origensPermitidas) {
         CorsConfiguration configuracao = new CorsConfiguration();
         configuracao.setAllowedOrigins(origensPermitidas);
-        configuracao.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuracao.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuracao.setAllowedHeaders(List.of("Authorization", "Content-Type", FiltroContextoUnidade.CABECALHO_UNIDADE));
         configuracao.setExposedHeaders(List.of(FiltroContextoUnidade.CABECALHO_UNIDADE));
         configuracao.setAllowCredentials(false);

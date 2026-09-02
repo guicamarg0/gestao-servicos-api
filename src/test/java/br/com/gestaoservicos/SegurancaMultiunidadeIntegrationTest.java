@@ -80,7 +80,8 @@ class SegurancaMultiunidadeIntegrationTest {
                         .header("Access-Control-Request-Method", "POST"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"))
-                .andExpect(header().string("Access-Control-Allow-Methods", org.hamcrest.Matchers.containsString("POST")));
+                .andExpect(header().string("Access-Control-Allow-Methods", org.hamcrest.Matchers.containsString("POST")))
+                .andExpect(header().string("Access-Control-Allow-Methods", org.hamcrest.Matchers.containsString("PATCH")));
     }
 
     @Test
@@ -115,6 +116,20 @@ class SegurancaMultiunidadeIntegrationTest {
         mvc.perform(delete("/api/v1/unidades/atual/usuarios/{id}", associacaoAdmin)
                         .header("Authorization", "Bearer " + tokenAdmin).header("X-Unidade-Id", unidadeId))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("ULTIMO_ADMIN_DA_UNIDADE"));
+    }
+
+    @Test
+    void perfisNaoAdministradoresNaoGerenciamUsuarios() throws Exception {
+        String tokenAdmin = cadastrarEAutenticar("Admin Permissoes", "admin.permissoes@example.com");
+        UUID unidadeId = criarUnidade(tokenAdmin, "Unidade Permissoes");
+        String tokenGestor = cadastrarEAutenticar("Gestor Permissoes", "gestor.permissoes@example.com");
+        mvc.perform(post("/api/v1/unidades/atual/usuarios").header("Authorization", "Bearer " + tokenAdmin)
+                        .header("X-Unidade-Id", unidadeId).contentType(MediaType.APPLICATION_JSON)
+                        .content(mapeadorJson.writeValueAsString(new UsuarioUnidade("gestor.permissoes@example.com", "GESTOR"))))
+                .andExpect(status().isCreated());
+        mvc.perform(get("/api/v1/unidades/atual/usuarios").header("Authorization", "Bearer " + tokenGestor)
+                        .header("X-Unidade-Id", unidadeId))
+                .andExpect(status().isForbidden());
     }
 
     @Test
