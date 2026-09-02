@@ -38,7 +38,7 @@ public class FiltroContextoUnidade extends OncePerRequestFilter {
                     escreverProblema(resposta, 400, "Identificador de unidade inválido");
                     return;
                 }
-                var associacao = associacoes.findByUsuarioIdAndUnidadeId(usuarioId, unidadeId);
+                var associacao = associacoes.findByUsuarioIdAndUnidadeIdAndAtivaTrue(usuarioId, unidadeId);
                 if (associacao.isEmpty()) {
                     escreverProblema(resposta, 403, "Usuário não possui acesso à unidade informada");
                     return;

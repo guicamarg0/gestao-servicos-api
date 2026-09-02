@@ -23,6 +23,8 @@ public class Associacao {
     private Perfil perfil;
     @Column(name = "criada_em", nullable = false)
     private Instant criadaEm;
+    @Column(nullable = false)
+    private boolean ativa;
 
     protected Associacao() {}
 
@@ -32,9 +34,15 @@ public class Associacao {
         this.unidade = unidade;
         this.perfil = perfil;
         this.criadaEm = Instant.now();
+        this.ativa = true;
     }
 
+    public UUID getId() { return id; }
     public Usuario getUsuario() { return usuario; }
     public Unidade getUnidade() { return unidade; }
     public Perfil getPerfil() { return perfil; }
+    public boolean isAtiva() { return ativa; }
+    public void alterarPerfil(Perfil perfil) { this.perfil = perfil; }
+    public void desativar() { this.ativa = false; }
+    public void reativar(Perfil perfil) { this.ativa = true; this.perfil = perfil; }
 }

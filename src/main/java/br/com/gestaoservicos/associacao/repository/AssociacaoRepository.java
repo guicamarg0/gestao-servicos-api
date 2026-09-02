@@ -10,8 +10,19 @@ import java.util.UUID;
 
 public interface AssociacaoRepository extends JpaRepository<Associacao, UUID> {
     @EntityGraph(attributePaths = "unidade")
-    List<Associacao> findAllByUsuarioIdOrderByUnidadeNome(UUID usuarioId);
+    List<Associacao> findAllByUsuarioIdAndAtivaTrueOrderByUnidadeNome(UUID usuarioId);
 
     @EntityGraph(attributePaths = {"unidade", "usuario"})
+    Optional<Associacao> findByUsuarioIdAndUnidadeIdAndAtivaTrue(UUID usuarioId, UUID unidadeId);
+
     Optional<Associacao> findByUsuarioIdAndUnidadeId(UUID usuarioId, UUID unidadeId);
+
+    @EntityGraph(attributePaths = "usuario")
+    List<Associacao> findAllByUnidadeIdAndAtivaTrueOrderByUsuarioNome(UUID unidadeId);
+
+    Optional<Associacao> findByIdAndUnidadeIdAndAtivaTrue(UUID id, UUID unidadeId);
+
+    boolean existsByUsuarioIdAndUnidadeIdAndAtivaTrue(UUID usuarioId, UUID unidadeId);
+
+    long countByUnidadeIdAndPerfilAndAtivaTrue(UUID unidadeId, br.com.gestaoservicos.associacao.model.Perfil perfil);
 }

@@ -26,7 +26,7 @@ public class UsuarioService {
     public MeResponseDTO consultarMe(UUID usuarioId) {
         Usuario usuario = usuarios.findById(usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuário não encontrado"));
-        var unidades = associacoes.findAllByUsuarioIdOrderByUnidadeNome(usuarioId).stream()
+        var unidades = associacoes.findAllByUsuarioIdAndAtivaTrueOrderByUnidadeNome(usuarioId).stream()
                 .map(AssociacaoUnidadeResponseDTO::de)
                 .toList();
         return new MeResponseDTO(usuario.getId(), usuario.getNome(), usuario.getEmail(), unidades);
@@ -34,7 +34,7 @@ public class UsuarioService {
 
     @Transactional(readOnly = true)
     public AssociacaoUnidadeResponseDTO selecionarUnidade(UUID usuarioId, UUID unidadeId) {
-        return associacoes.findByUsuarioIdAndUnidadeId(usuarioId, unidadeId)
+        return associacoes.findByUsuarioIdAndUnidadeIdAndAtivaTrue(usuarioId, unidadeId)
                 .map(AssociacaoUnidadeResponseDTO::de)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.FORBIDDEN, "Usuário não possui acesso à unidade informada"));

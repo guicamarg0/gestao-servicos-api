@@ -84,6 +84,40 @@ class SegurancaMultiunidadeIntegrationTest {
     }
 
     @Test
+    void administradorGerenciaAcessosSemPermitirRemoverUltimoAdmin() throws Exception {
+        String tokenAdmin = cadastrarEAutenticar("Admin Equipe", "admin.equipe@example.com");
+        UUID unidadeId = criarUnidade(tokenAdmin, "Unidade Equipe");
+        cadastrarEAutenticar("Operador Equipe", "operador.equipe@example.com");
+
+        String corpoAssociacao = mvc.perform(post("/api/v1/unidades/atual/usuarios")
+                        .header("Authorization", "Bearer " + tokenAdmin)
+                        .header("X-Unidade-Id", unidadeId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapeadorJson.writeValueAsString(new UsuarioUnidade("operador.equipe@example.com", "OPERADOR"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.email").value("operador.equipe@example.com"))
+                .andExpect(jsonPath("$.perfil").value("OPERADOR"))
+                .andReturn().getResponse().getContentAsString();
+        UUID associacaoOperador = UUID.fromString(mapeadorJson.readTree(corpoAssociacao).get("id").asText());
+
+        mvc.perform(get("/api/v1/unidades/atual/usuarios")
+                        .header("Authorization", "Bearer " + tokenAdmin).header("X-Unidade-Id", unidadeId))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2));
+
+        mvc.perform(delete("/api/v1/unidades/atual/usuarios/{id}", associacaoOperador)
+                        .header("Authorization", "Bearer " + tokenAdmin).header("X-Unidade-Id", unidadeId))
+                .andExpect(status().isNoContent());
+
+        String corpoUsuarios = mvc.perform(get("/api/v1/unidades/atual/usuarios")
+                        .header("Authorization", "Bearer " + tokenAdmin).header("X-Unidade-Id", unidadeId))
+                .andReturn().getResponse().getContentAsString();
+        UUID associacaoAdmin = UUID.fromString(mapeadorJson.readTree(corpoUsuarios).get(0).get("id").asText());
+        mvc.perform(delete("/api/v1/unidades/atual/usuarios/{id}", associacaoAdmin)
+                        .header("Authorization", "Bearer " + tokenAdmin).header("X-Unidade-Id", unidadeId))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("ULTIMO_ADMIN_DA_UNIDADE"));
+    }
+
+    @Test
     void rejeitaNomeDeUnidadeDuplicadoIgnorandoAcentosCaixaEEspacos() throws Exception {
         String tokenAlice = cadastrarEAutenticar("Alice Duplicidade", "alice.duplicidade@example.com");
         criarUnidade(tokenAlice, "Oficina São   Bento");
@@ -161,4 +195,5 @@ class SegurancaMultiunidadeIntegrationTest {
     record CredenciaisCadastro(String nome, String email, String senha) {}
     record CredenciaisLogin(String email, String senha) {}
     record NomeUnidade(String nome) {}
+    record UsuarioUnidade(String email, String perfil) {}
 }
