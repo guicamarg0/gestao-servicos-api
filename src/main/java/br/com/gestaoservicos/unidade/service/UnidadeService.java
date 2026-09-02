@@ -8,6 +8,7 @@ import br.com.gestaoservicos.unidade.model.Unidade;
 import br.com.gestaoservicos.unidade.repository.UnidadeRepository;
 import br.com.gestaoservicos.usuario.repository.UsuarioRepository;
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -30,7 +31,18 @@ public class UnidadeService {
     public UnidadeResponseDTO criarComAdministrador(UUID usuarioId, String nome) {
         var usuario = usuarios.findById(usuarioId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuário não encontrado"));
-        Unidade unidade = unidades.save(new Unidade(nome.trim()));
+        String nomeParaExibicao = NormalizadorNomeUnidade.limparParaExibicao(nome);
+        String nomeNormalizado = NormalizadorNomeUnidade.normalizar(nomeParaExibicao);
+        if (unidades.existsByNomeNormalizado(nomeNormalizado)) {
+            throw new NomeUnidadeJaExistenteException();
+        }
+
+        Unidade unidade;
+        try {
+            unidade = unidades.saveAndFlush(new Unidade(nomeParaExibicao, nomeNormalizado));
+        } catch (DataIntegrityViolationException excecao) {
+            throw new NomeUnidadeJaExistenteException();
+        }
         associacoes.save(new Associacao(usuario, unidade, Perfil.ADMIN));
         return UnidadeResponseDTO.de(unidade, Perfil.ADMIN);
     }

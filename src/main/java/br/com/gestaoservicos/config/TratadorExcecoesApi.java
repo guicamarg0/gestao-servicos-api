@@ -1,5 +1,6 @@
 package br.com.gestaoservicos.config;
 
+import br.com.gestaoservicos.unidade.service.NomeUnidadeJaExistenteException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -10,6 +11,16 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class TratadorExcecoesApi {
+    @ExceptionHandler(NomeUnidadeJaExistenteException.class)
+    ProblemDetail tratarNomeUnidadeJaExistente(
+            NomeUnidadeJaExistenteException excecao,
+            HttpServletRequest requisicao) {
+        ProblemDetail detalhe = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, excecao.getMessage());
+        detalhe.setProperty("code", "UNIDADE_NOME_JA_EXISTENTE");
+        detalhe.setProperty("path", requisicao.getRequestURI());
+        return detalhe;
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
     ProblemDetail tratarStatus(ResponseStatusException excecao, HttpServletRequest requisicao) {
         ProblemDetail detalhe = ProblemDetail.forStatusAndDetail(excecao.getStatusCode(), excecao.getReason());

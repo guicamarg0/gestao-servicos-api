@@ -80,6 +80,21 @@ class SegurancaMultiunidadeIntegrationTest {
                 .andExpect(header().string("Access-Control-Allow-Methods", org.hamcrest.Matchers.containsString("POST")));
     }
 
+    @Test
+    void rejeitaNomeDeUnidadeDuplicadoIgnorandoAcentosCaixaEEspacos() throws Exception {
+        String tokenAlice = cadastrarEAutenticar("Alice Duplicidade", "alice.duplicidade@example.com");
+        criarUnidade(tokenAlice, "Oficina São   Bento");
+
+        String tokenBob = cadastrarEAutenticar("Bob Duplicidade", "bob.duplicidade@example.com");
+        mvc.perform(post("/api/v1/unidades")
+                        .header("Authorization", "Bearer " + tokenBob)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapeadorJson.writeValueAsString(new NomeUnidade("  OFICINA SAO BENTO  "))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("UNIDADE_NOME_JA_EXISTENTE"))
+                .andExpect(jsonPath("$.detail").value("Já existe uma unidade com esse nome."));
+    }
+
     private String cadastrarEAutenticar(String nome, String email) throws Exception {
         mvc.perform(post("/api/v1/autenticacao/cadastro")
                         .contentType(MediaType.APPLICATION_JSON)

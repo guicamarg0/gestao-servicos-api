@@ -7,6 +7,7 @@ Fundação da API multiusuário e multiunidade em Java 21, Spring Boot 4.1, Post
 - cadastro e login com senha protegida e JWT stateless;
 - usuário, unidade e associação com perfis `ADMIN`, `GESTOR`, `OPERADOR` e `CONSULTA`;
 - criação transacional de unidade com associação `ADMIN` para o criador;
+- nome globalmente único de unidade, ignorando caixa, acentos e espaços excedentes;
 - consulta de `/me` e seleção validada de unidade;
 - contexto por `X-Unidade-Id`, sempre conferido pela API contra o usuário autenticado;
 - autorização contextual por perfil e teste de bloqueio de acesso cruzado.
@@ -43,10 +44,12 @@ Swagger UI: `http://localhost:8080/swagger-ui.html`. Contrato OpenAPI JSON: `htt
 | `POST` | `/api/v1/autenticacao/login` | público; devolve Bearer JWT |
 | `GET` | `/api/v1/me` | autenticado; lista associações e perfis |
 | `POST` | `/api/v1/me/unidades/{unidadeId}/selecionar` | valida que a associação pertence ao usuário |
-| `POST` | `/api/v1/unidades` | autenticado; cria unidade + associação `ADMIN` atomicamente |
+| `POST` | `/api/v1/unidades` | autenticado; cria unidade + associação `ADMIN` atomicamente; nome duplicado retorna `409` |
 | `GET` | `/api/v1/unidades/atual/protegida` | exige `X-Unidade-Id` válido e perfil `ADMIN`, `GESTOR` ou `OPERADOR` |
 
 O JWT identifica somente o usuário. A unidade é selecionada pelo cabeçalho `X-Unidade-Id`; o filtro de segurança consulta a associação a cada requisição e não confia no ID enviado pelo cliente. Futuras entidades operacionais devem possuir `unidade_id` e suas consultas devem ser filtradas pelo contexto já validado.
+
+Quando o nome normalizado da unidade já existe, a API responde `409 Conflict` em `application/problem+json`, com `code` igual a `UNIDADE_NOME_JA_EXISTENTE`. A restrição `uk_unidade_nome_normalizado` no PostgreSQL é a garantia final contra criações concorrentes.
 
 ## Padrão de projeto
 

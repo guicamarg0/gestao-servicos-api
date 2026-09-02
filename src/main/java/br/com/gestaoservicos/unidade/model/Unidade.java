@@ -15,14 +15,17 @@ public class Unidade {
     private UUID id;
     @Column(nullable = false, length = 120)
     private String nome;
+    @Column(name = "nome_normalizado", nullable = false, length = 120)
+    private String nomeNormalizado;
     @Column(name = "criada_em", nullable = false)
     private Instant criadaEm;
 
     protected Unidade() {}
 
-    public Unidade(String nome) {
+    public Unidade(String nome, String nomeNormalizado) {
         this.id = UUID.randomUUID();
         this.nome = nome;
+        this.nomeNormalizado = nomeNormalizado;
         this.criadaEm = Instant.now();
     }
 
