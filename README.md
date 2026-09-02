@@ -34,6 +34,8 @@ mvn test
 mvn verify
 ```
 
+Os testes sempre exercitam concorrência e o contrato HTTP no banco em memória. Com um engine Docker disponível, o Testcontainers também inicia PostgreSQL 17 e valida a migração e a restrição única no banco-alvo; sem Docker, esse teste específico é marcado como ignorado.
+
 Swagger UI: `http://localhost:8080/swagger-ui.html`. Contrato OpenAPI JSON: `http://localhost:8080/v3/api-docs`.
 
 ## Contrato inicial

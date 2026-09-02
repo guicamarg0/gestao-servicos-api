@@ -10,6 +10,9 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.UUID;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -93,6 +96,39 @@ class SegurancaMultiunidadeIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("UNIDADE_NOME_JA_EXISTENTE"))
                 .andExpect(jsonPath("$.detail").value("Já existe uma unidade com esse nome."));
+    }
+
+    @Test
+    void permiteSomenteUmaCriacaoQuandoRequisicoesConcorrentesUsamOMesmoNome() throws Exception {
+        String tokenAlice = cadastrarEAutenticar("Alice Concorrência", "alice.concorrencia@example.com");
+        String tokenBob = cadastrarEAutenticar("Bob Concorrência", "bob.concorrencia@example.com");
+        CountDownLatch prontas = new CountDownLatch(2);
+        CountDownLatch disparar = new CountDownLatch(1);
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var respostas = List.of(tokenAlice, tokenBob).stream()
+                    .map(token -> executor.submit(() -> {
+                        prontas.countDown();
+                        disparar.await();
+                        return mvc.perform(post("/api/v1/unidades")
+                                        .header("Authorization", "Bearer " + token)
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(mapeadorJson.writeValueAsString(
+                                                new NomeUnidade("Unidade Concorrente"))))
+                                .andReturn().getResponse().getStatus();
+                    }))
+                    .toList();
+
+            prontas.await();
+            disparar.countDown();
+
+            assertThat(respostas.get(0).get()).isIn(201, 409);
+            assertThat(respostas.get(1).get()).isIn(201, 409);
+            assertThat(respostas.stream().map(resposta -> {
+                try { return resposta.get(); }
+                catch (Exception excecao) { throw new AssertionError(excecao); }
+            }).toList()).containsExactlyInAnyOrder(201, 409);
+        }
     }
 
     private String cadastrarEAutenticar(String nome, String email) throws Exception {
