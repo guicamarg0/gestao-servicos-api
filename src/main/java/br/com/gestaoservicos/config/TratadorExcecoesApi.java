@@ -3,6 +3,7 @@ package br.com.gestaoservicos.config;
 import br.com.gestaoservicos.unidade.service.NomeUnidadeJaExistenteException;
 import br.com.gestaoservicos.associacao.service.RegraAssociacaoException;
 import br.com.gestaoservicos.configuracaounidade.service.DocumentoInvalidoException;
+import br.com.gestaoservicos.contratante.service.DocumentoContratanteJaExisteException;
 import br.com.gestaoservicos.compartilhado.erro.CodigosErroApi;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,11 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class TratadorExcecoesApi {
+    @ExceptionHandler(DocumentoContratanteJaExisteException.class)
+    ProblemDetail tratarDocumentoContratanteJaExiste(DocumentoContratanteJaExisteException excecao, HttpServletRequest requisicao) {
+        ProblemDetail detalhe = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, excecao.getMessage());
+        detalhe.setProperty("code", "CONTRATANTE_DOCUMENTO_JA_EXISTE"); detalhe.setProperty("path", requisicao.getRequestURI()); return detalhe;
+    }
     @ExceptionHandler(DocumentoInvalidoException.class)
     ProblemDetail tratarDocumentoInvalido(DocumentoInvalidoException excecao, HttpServletRequest requisicao) {
         ProblemDetail detalhe = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, excecao.getMessage());
