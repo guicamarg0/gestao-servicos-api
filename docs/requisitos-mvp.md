@@ -123,7 +123,7 @@ O sistema manterá um único cadastro de itens para compor orçamentos, com os t
 
 Todo item pertence à unidade e possui nome, descrição opcional, unidade de medida, valor padrão, código ou referência opcional e situação ativo/inativo. Itens inativos não podem ser adicionados a novos orçamentos, mas permanecem em documentos históricos.
 
-Unidades de medida iniciais: unidade, hora, diária, metro, metro quadrado, quilograma, litro e outra unidade personalizada. Valores monetários e quantidades usam sempre duas casas decimais. O orçamento pode ajustar os valores copiados do catálogo e também aceitar itens manuais sem cadastro prévio.
+Unidades de medida iniciais: unidade, hora, diária, metro, metro quadrado, quilograma, litro e outra unidade personalizada. Valores monetários usam duas casas decimais. Quantidades de hora e diária/dia usam apenas números inteiros; as demais unidades usam duas casas decimais. O orçamento pode ajustar os valores copiados do catálogo e também aceitar itens manuais sem cadastro prévio.
 
 ## Contratantes
 
