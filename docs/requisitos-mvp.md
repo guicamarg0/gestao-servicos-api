@@ -75,6 +75,15 @@ Todo PDF de orçamento deve conter identificação e logo da unidade, número e 
 
 A seção visual de assinatura ou aceite do contratante será opcional por orçamento, controlada por um checkbox antes da emissão. A escolha fica congelada junto com a revisão e o respectivo PDF.
 
+### Permissões do orçamento
+
+| Perfil | Permissões |
+| --- | --- |
+| `ADMIN` | Acesso total ao módulo. |
+| `GESTOR` | Criar, editar, emitir, cancelar, aprovar e recusar. |
+| `OPERADOR` | Criar e editar rascunhos; não aprova nem cancela. |
+| `CONSULTA` | Visualizar e baixar PDFs. |
+
 ### Contratante, contratado e dados de pagamento
 
 - Contratante é a pessoa ou empresa que receberá a proposta e é opcional, inclusive na emissão. Isso permite PDFs genéricos e modelos sem destinatário.
