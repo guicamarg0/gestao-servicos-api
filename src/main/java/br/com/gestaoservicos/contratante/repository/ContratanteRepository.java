@@ -6,7 +6,7 @@ import java.util.*;
 public interface ContratanteRepository extends JpaRepository<Contratante, UUID> {
     boolean existsByUnidadeIdAndDocumento(UUID unidadeId, String documento);
     boolean existsByUnidadeIdAndDocumentoAndIdNot(UUID unidadeId, String documento, UUID id);
-    @Query("select c from Contratante c where c.unidade.id = :unidadeId and (:busca is null or lower(c.nomeRazaoSocial) like lower(concat('%', :busca, '%')) or lower(coalesce(c.nomeFantasia, '')) like lower(concat('%', :busca, '%')) or c.documento like concat('%', :busca, '%'))")
+    @Query("select c from Contratante c where c.unidade.id = :unidadeId and (lower(c.nomeRazaoSocial) like lower(concat('%', :busca, '%')) or lower(coalesce(c.nomeFantasia, '')) like lower(concat('%', :busca, '%')) or c.documento like concat('%', :busca, '%'))")
     Page<Contratante> buscar(UUID unidadeId, String busca, Pageable pageable);
     Optional<Contratante> findByIdAndUnidadeId(UUID id, UUID unidadeId);
 }

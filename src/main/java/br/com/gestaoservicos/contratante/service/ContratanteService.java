@@ -16,7 +16,7 @@ import java.util.*;
 @Service public class ContratanteService {
     private final ContratanteRepository contratantes; private final UnidadeRepository unidades; private final ContratanteMapper mapper;
     public ContratanteService(ContratanteRepository contratantes, UnidadeRepository unidades, ContratanteMapper mapper) { this.contratantes = contratantes; this.unidades = unidades; this.mapper = mapper; }
-    @Transactional(readOnly = true) public PaginaResponseDTO<ContratanteResponseDTO> listar(UUID unidadeId, String busca, Pageable paginacao) { return PaginaResponseDTO.de(contratantes.buscar(unidadeId, limparOpcional(busca), paginacao).map(mapper::paraResponseDTO)); }
+    @Transactional(readOnly = true) public PaginaResponseDTO<ContratanteResponseDTO> listar(UUID unidadeId, String busca, Pageable paginacao) { String termo = limparOpcional(busca); return PaginaResponseDTO.de(contratantes.buscar(unidadeId, termo == null ? "" : termo, paginacao).map(mapper::paraResponseDTO)); }
     @Transactional(readOnly = true) public ContratanteResponseDTO consultar(UUID unidadeId, UUID id) { return mapper.paraResponseDTO(obter(unidadeId, id)); }
     @Transactional public ContratanteResponseDTO criar(UUID unidadeId, ContratanteRequestDTO dto) {
         validarTipoDocumento(dto.tipo(), dto.documento()); validarDocumentoUnico(unidadeId, dto.documento(), null);
