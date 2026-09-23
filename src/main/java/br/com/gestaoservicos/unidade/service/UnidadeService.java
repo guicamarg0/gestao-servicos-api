@@ -4,6 +4,7 @@ import br.com.gestaoservicos.associacao.model.Associacao;
 import br.com.gestaoservicos.associacao.model.Perfil;
 import br.com.gestaoservicos.associacao.repository.AssociacaoRepository;
 import br.com.gestaoservicos.unidade.dto.UnidadeResponseDTO;
+import br.com.gestaoservicos.unidade.mapper.UnidadeMapper;
 import br.com.gestaoservicos.unidade.model.Unidade;
 import br.com.gestaoservicos.unidade.repository.UnidadeRepository;
 import br.com.gestaoservicos.usuario.repository.UsuarioRepository;
@@ -20,11 +21,14 @@ public class UnidadeService {
     private final UnidadeRepository unidades;
     private final UsuarioRepository usuarios;
     private final AssociacaoRepository associacoes;
+    private final UnidadeMapper mapper;
 
-    public UnidadeService(UnidadeRepository unidades, UsuarioRepository usuarios, AssociacaoRepository associacoes) {
+    public UnidadeService(UnidadeRepository unidades, UsuarioRepository usuarios, AssociacaoRepository associacoes,
+                          UnidadeMapper mapper) {
         this.unidades = unidades;
         this.usuarios = usuarios;
         this.associacoes = associacoes;
+        this.mapper = mapper;
     }
 
     @Transactional
@@ -44,6 +48,6 @@ public class UnidadeService {
             throw new NomeUnidadeJaExistenteException();
         }
         associacoes.save(new Associacao(usuario, unidade, Perfil.ADMIN));
-        return UnidadeResponseDTO.de(unidade, Perfil.ADMIN);
+        return mapper.paraResponseDTO(unidade, Perfil.ADMIN);
     }
 }

@@ -43,7 +43,9 @@ class SegurancaMultiunidadeIntegrationTest {
         mvc.perform(get("/api/v1/unidades/atual/protegida")
                         .header("Authorization", "Bearer " + tokenAlice)
                         .header("X-Unidade-Id", unidadeBob))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACESSO_NEGADO"))
+                .andExpect(jsonPath("$.path").value("/api/v1/unidades/atual/protegida"));
 
         mvc.perform(get("/api/v1/unidades/atual/protegida")
                         .header("Authorization", "Bearer " + tokenAlice)
@@ -71,6 +73,19 @@ class SegurancaMultiunidadeIntegrationTest {
                         .content(mapeadorJson.writeValueAsString(
                                 new CredenciaisCadastro("Daniel", "daniel@example.com", "password123"))))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void rejeicaoDeCabecalhoDeUnidadeInvalidoSegueContratoDeErro() throws Exception {
+        String token = cadastrarEAutenticar("Erica", "erica@example.com");
+
+        mvc.perform(get("/api/v1/unidades/atual/protegida")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-Unidade-Id", "nao-e-um-uuid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andExpect(jsonPath("$.code").value("REQUISICAO_INVALIDA"))
+                .andExpect(jsonPath("$.path").value("/api/v1/unidades/atual/protegida"));
     }
 
     @Test

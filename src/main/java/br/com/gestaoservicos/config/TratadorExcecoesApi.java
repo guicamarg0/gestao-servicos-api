@@ -2,6 +2,7 @@ package br.com.gestaoservicos.config;
 
 import br.com.gestaoservicos.unidade.service.NomeUnidadeJaExistenteException;
 import br.com.gestaoservicos.associacao.service.RegraAssociacaoException;
+import br.com.gestaoservicos.compartilhado.erro.CodigosErroApi;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -33,6 +34,7 @@ public class TratadorExcecoesApi {
     @ExceptionHandler(ResponseStatusException.class)
     ProblemDetail tratarStatus(ResponseStatusException excecao, HttpServletRequest requisicao) {
         ProblemDetail detalhe = ProblemDetail.forStatusAndDetail(excecao.getStatusCode(), excecao.getReason());
+        detalhe.setProperty("code", CodigosErroApi.para(excecao.getStatusCode()));
         detalhe.setProperty("path", requisicao.getRequestURI());
         return detalhe;
     }
@@ -43,7 +45,9 @@ public class TratadorExcecoesApi {
                 .findFirst().map(erro -> erro.getField() + ": " + erro.getDefaultMessage())
                 .orElse("Requisição inválida");
         ProblemDetail detalhe = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, mensagem);
+        detalhe.setProperty("code", "VALIDACAO_INVALIDA");
         detalhe.setProperty("path", requisicao.getRequestURI());
         return detalhe;
     }
+
 }
