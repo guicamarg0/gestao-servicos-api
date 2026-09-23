@@ -127,7 +127,7 @@ Unidades de medida iniciais: unidade, hora, diária, metro, metro quadrado, quil
 
 ## Contratantes
 
-O contratante é cadastrado por unidade e pode ser pessoa física ou jurídica. O cadastro possui nome completo ou razão social, nome fantasia opcional, CPF ou CNPJ, endereço, observações internas e situação ativo/inativo.
+O contratante é cadastrado por unidade e pode ser pessoa física ou jurídica. O cadastro possui nome completo ou razão social, nome fantasia opcional, CPF ou CNPJ obrigatório, endereço, observações internas e situação ativo/inativo.
 
 Um CPF ou CNPJ informado deve ser único dentro da unidade. Contratantes que possuírem orçamento ou serviço no histórico não são excluídos; podem apenas ser inativados.
 
