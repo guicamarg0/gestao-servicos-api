@@ -75,9 +75,11 @@ Todo PDF de orçamento deve conter identificação e logo da unidade, número e 
 
 A seção visual de assinatura ou aceite do contratante será opcional por orçamento, controlada por um checkbox antes da emissão. A escolha fica congelada junto com a revisão e o respectivo PDF.
 
-### Contratante e dados de pagamento
+### Contratante, contratado e dados de pagamento
 
-- Contratante será obrigatório para emitir um PDF comercial, mas não para salvar rascunho.
+- Contratante é a pessoa ou empresa que receberá a proposta e é opcional, inclusive na emissão. Isso permite PDFs genéricos e modelos sem destinatário.
+- Contratado é a unidade prestadora do serviço. Seus dados de identificação, contato e logo vêm da configuração da unidade.
+- Cada revisão emitida guarda uma cópia imutável dos dados do contratado usados no PDF, para preservar o histórico mesmo se a unidade for alterada depois.
 - Dados de pagamento padrão pertencem à configuração da unidade.
 - Cada orçamento terá condições de pagamento em texto livre, iniciadas por um texto padrão configurado na unidade.
 - O usuário pode ajustar as condições apenas para aquele orçamento; a revisão emitida guarda uma cópia imutável do texto e dos dados de pagamento usados.
