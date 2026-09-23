@@ -84,6 +84,12 @@ A seção visual de assinatura ou aceite do contratante será opcional por orça
 | `OPERADOR` | Criar e editar rascunhos; não aprova nem cancela. |
 | `CONSULTA` | Visualizar e baixar PDFs. |
 
+### Histórico e auditoria
+
+O orçamento manterá uma linha do tempo com criação, alterações de rascunho, criação de revisão, atualização de valores pelo catálogo, emissão de PDF, aprovação, recusa, cancelamento e alterações relevantes de contratante ou condições de pagamento.
+
+Cada evento deve registrar usuário responsável e data/hora. Observações de usuário são opcionais em todos os eventos, inclusive recusa e cancelamento.
+
 ### Contratante, contratado e dados de pagamento
 
 - Contratante é a pessoa ou empresa que receberá a proposta e é opcional, inclusive na emissão. Isso permite PDFs genéricos e modelos sem destinatário.
