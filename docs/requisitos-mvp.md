@@ -133,3 +133,20 @@ Unidades de medida iniciais: unidade, hora, diária, metro, metro quadrado, quil
 4. Catálogo de serviços e materiais.
 5. Orçamentos, revisões e PDF.
 6. Contratos, após planejamento específico.
+
+## Configuração da unidade
+
+### Dados obrigatórios
+
+- Nome ou razão social.
+- Documento, CPF ou CNPJ.
+- Endereço completo.
+- Dados de pagamento.
+
+Campos inicialmente opcionais: nome fantasia, e-mail, logo, responsável e texto padrão de condições de pagamento.
+
+### Pagamento
+
+Dados de pagamento são informações de recebimento estáveis da unidade, como chave PIX, favorecido, banco, agência e conta. Eles são configurados uma vez na unidade e podem ser exibidos nos PDFs.
+
+Condições de pagamento são regras específicas de cada orçamento, como pagamento à vista, sinal e saldo ou parcelamento. O orçamento inicia com o texto padrão da unidade, permite edição para a proposta e congela o texto usado na revisão emitida.
