@@ -25,6 +25,13 @@ Não haverá migração de dados do sistema legado. O novo banco iniciará vazio
 - O orçamento sem contratante em rascunho também pode ser usado como modelo, sem um tipo de registro separado.
 - Duplicar orçamento cria uma nova negociação, com novo número e revisão inicial.
 
+### Relação com serviços executados
+
+- O orçamento é uma proposta comercial e pode conter mão de obra, peças e materiais.
+- Mão de obra, peça e material são tipos de item da proposta; não representam, isoladamente, o serviço executado para o cliente.
+- O **serviço** representa o trabalho efetivamente contratado/executado para um contratante e será um módulo posterior, com agenda, responsáveis, execução e anexos.
+- Um orçamento aprovado poderá originar um serviço baseado na revisão aprovada. Orçamentos não aprovados não criam serviços.
+
 ### Numeração e revisão
 
 - O número é sugerido automaticamente, de modo sequencial por unidade, no formato inicial `ORC-AAAA-000000`.
