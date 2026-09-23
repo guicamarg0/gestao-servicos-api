@@ -61,6 +61,14 @@ EMITIDO -> RASCUNHO (nova revisão para edição)
 - Itens manuais não são alterados por essa ação.
 - Após aprovação, recusa ou cancelamento, os valores ficam congelados definitivamente.
 
+### Totais, descontos e acréscimos
+
+- O orçamento calcula subtotal de itens, desconto geral, acréscimo geral e total final.
+- Neste MVP, desconto é apenas geral; não haverá desconto individual por item.
+- Desconto geral e acréscimo geral podem ser informados em valor ou percentual sobre o subtotal.
+- O total final não pode ser negativo.
+- A memória de cálculo deve aparecer no formulário e no PDF da revisão emitida.
+
 ### Contratante e dados de pagamento
 
 - Contratante será obrigatório para emitir um PDF comercial, mas não para salvar rascunho.
