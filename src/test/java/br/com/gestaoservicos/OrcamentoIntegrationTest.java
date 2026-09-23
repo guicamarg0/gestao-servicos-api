@@ -8,6 +8,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import br.com.gestaoservicos.orcamento.repository.RevisaoOrcamentoRepository;
 import tools.jackson.databind.ObjectMapper;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.text.PDFTextStripper;
 
 import java.util.HashSet;
 import java.util.List;
@@ -127,6 +129,43 @@ class OrcamentoIntegrationTest {
         assertThat(revisoes.findByOrcamentoIdAndNumeroRevisao(id,1).orElseThrow().getContratadoSnapshot()).contains("Prestadora");
         String outro=login("orcamento.outra.unidade@test.com"); UUID outra=unidade(outro,"Outra Unidade Orcamento");
         mvc.perform(get("/api/v1/orcamentos/{id}",id).header("Authorization",bearer(outro)).header("X-Unidade-Id",outra)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void preservaPdfGenericoPorRevisaoEBloqueiaOutraUnidade() throws Exception {
+        String token=login("orcamento.pdf@test.com"); UUID unidade=unidade(token,"Unidade PDF"); UUID id=criarRascunho(token,unidade,10);
+        mvc.perform(post("/api/v1/orcamentos/{id}/emitir",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk());
+        byte[] primeiro=mvc.perform(get("/api/v1/orcamentos/{id}/revisoes/1/pdf",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade))
+                .andExpect(status().isOk()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PDF)).andReturn().getResponse().getContentAsByteArray();
+        assertThat(new String(primeiro,java.nio.charset.StandardCharsets.ISO_8859_1)).startsWith("%PDF");
+        try (var documento=Loader.loadPDF(primeiro)) { assertThat(new PDFTextStripper().getText(documento)).contains("ORCAMENTO", "Proposta sem destinatario", "MEMORIA DE CALCULO", "TOTAL:"); }
+        mvc.perform(put("/api/v1/unidades/atual/configuracao").header("Authorization",bearer(token)).header("X-Unidade-Id",unidade).contentType(MediaType.APPLICATION_JSON).content("{\"nomeRazaoSocial\":\"Nova Prestadora\",\"documento\":\"52998224725\",\"enderecoCompleto\":\"Rua B\",\"formasRecebimento\":[{\"tipo\":\"PIX\",\"nomeExibicao\":\"PIX\",\"instrucoes\":\"chave\",\"ativa\":true,\"padrao\":true}]}")) .andExpect(status().isOk());
+        byte[] novamente=mvc.perform(get("/api/v1/orcamentos/{id}/revisoes/1/pdf",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        assertThat(novamente).isEqualTo(primeiro);
+        String outro=login("orcamento.pdf.outra@test.com"); UUID outra=unidade(outro,"Outra PDF");
+        mvc.perform(get("/api/v1/orcamentos/{id}/revisoes/1/pdf",id).header("Authorization",bearer(outro)).header("X-Unidade-Id",outra)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void preservaPdfIndependenteParaCadaRevisaoEmitida() throws Exception {
+        String token=login("orcamento.pdf.revisoes@test.com"); UUID unidade=unidade(token,"Unidade PDFs Revisoes"); UUID id=criarRascunho(token,unidade,10);
+        mvc.perform(post("/api/v1/orcamentos/{id}/emitir",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk());
+        byte[] primeira=mvc.perform(get("/api/v1/orcamentos/{id}/revisoes/1/pdf",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        mvc.perform(post("/api/v1/orcamentos/{id}/nova-revisao",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk());
+        mvc.perform(put("/api/v1/orcamentos/{id}",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade).contentType(MediaType.APPLICATION_JSON).content(corpoRascunho(20))).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/orcamentos/{id}/emitir",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk());
+        byte[] segunda=mvc.perform(get("/api/v1/orcamentos/{id}/revisoes/2/pdf",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        assertThat(segunda).isNotEqualTo(primeira);
+        assertThat(mvc.perform(get("/api/v1/orcamentos/{id}/revisoes/1/pdf",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andReturn().getResponse().getContentAsByteArray()).isEqualTo(primeira);
+    }
+
+    @Test
+    void criaNovasPaginasParaConteudoExtenso() throws Exception {
+        String token=login("orcamento.pdf.paginas@test.com"); UUID unidade=unidade(token,"Unidade PDF Paginas");
+        String observacoes="texto ".repeat(650); String corpo=corpoRascunho(10).replace("\"exibirAssinatura\":false","\"observacoesComerciais\":\""+observacoes+"\",\"exibirAssinatura\":false");
+        String criado=mvc.perform(post("/api/v1/orcamentos").header("Authorization",bearer(token)).header("X-Unidade-Id",unidade).contentType(MediaType.APPLICATION_JSON).content(corpo)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(); UUID id=UUID.fromString(json.readTree(criado).get("id").asText());
+        mvc.perform(post("/api/v1/orcamentos/{id}/emitir",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk()); byte[] pdf=mvc.perform(get("/api/v1/orcamentos/{id}/revisoes/1/pdf",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        try(var documento=Loader.loadPDF(pdf)){assertThat(documento.getNumberOfPages()).isGreaterThan(1);}
     }
 
     private UUID criarRascunho(String token, UUID unidade, int valor) throws Exception {
