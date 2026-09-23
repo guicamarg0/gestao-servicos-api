@@ -147,6 +147,6 @@ Campos inicialmente opcionais: nome fantasia, e-mail, logo, responsável e texto
 
 ### Pagamento
 
-Dados de pagamento são informações de recebimento estáveis da unidade, como chave PIX, favorecido, banco, agência e conta. Eles são configurados uma vez na unidade e podem ser exibidos nos PDFs.
+Dados de pagamento são informações de recebimento estáveis da unidade, como chave PIX, favorecido, banco, agência e conta. A unidade pode manter mais de uma forma de recebimento e escolher quais delas exibir em cada orçamento. Os dados são configurados uma vez na unidade e podem ser exibidos nos PDFs.
 
 Condições de pagamento são regras específicas de cada orçamento, como pagamento à vista, sinal e saldo ou parcelamento. O orçamento inicia com o texto padrão da unidade, permite edição para a proposta e congela o texto usado na revisão emitida.
