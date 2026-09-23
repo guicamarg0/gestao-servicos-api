@@ -125,6 +125,16 @@ Todo item pertence à unidade e possui nome, descrição opcional, unidade de me
 
 Unidades de medida iniciais: unidade, hora, diária, metro, metro quadrado, quilograma, litro e outra unidade personalizada. O orçamento pode ajustar os valores copiados do catálogo e também aceitar itens manuais sem cadastro prévio.
 
+## Contratantes
+
+O contratante é cadastrado por unidade e pode ser pessoa física ou jurídica. O cadastro possui nome completo ou razão social, nome fantasia opcional, CPF ou CNPJ, endereço, observações internas e situação ativo/inativo.
+
+Um CPF ou CNPJ informado deve ser único dentro da unidade. Contratantes que possuírem orçamento ou serviço no histórico não são excluídos; podem apenas ser inativados.
+
+O contratante pode ter vários contatos simples. Cada contato possui nome e pelo menos um meio de contato: telefone ou e-mail. Cargos, departamentos e automações de comunicação ficam fora do MVP.
+
+O cadastro rápido de contratante solicitará nome ou razão social e telefone; os demais dados poderão ser completados posteriormente. Os dados usados são copiados para a revisão emitida do orçamento, sem alterar PDFs históricos.
+
 ## Próximos módulos planejados
 
 1. Organização técnica da API: MVC, DTOs, mappers, exceções, auditoria, paginação e testes multiunidade.
