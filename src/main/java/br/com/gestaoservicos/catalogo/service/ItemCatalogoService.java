@@ -17,7 +17,7 @@ import java.util.UUID;
 public class ItemCatalogoService {
     private final ItemCatalogoRepository itens; private final UnidadeRepository unidades; private final ItemCatalogoMapper mapper;
     public ItemCatalogoService(ItemCatalogoRepository itens, UnidadeRepository unidades, ItemCatalogoMapper mapper) { this.itens = itens; this.unidades = unidades; this.mapper = mapper; }
-    @Transactional(readOnly = true) public PaginaResponseDTO<ItemCatalogoResponseDTO> listar(UUID unidadeId, String busca, Pageable paginacao) { return PaginaResponseDTO.de(itens.buscar(unidadeId, limparOpcional(busca), paginacao).map(mapper::paraResponseDTO)); }
+    @Transactional(readOnly = true) public PaginaResponseDTO<ItemCatalogoResponseDTO> listar(UUID unidadeId, String busca, Pageable paginacao) { String termo = limparOpcional(busca); return PaginaResponseDTO.de(itens.buscar(unidadeId, termo == null ? "" : termo, paginacao).map(mapper::paraResponseDTO)); }
     @Transactional(readOnly = true) public ItemCatalogoResponseDTO consultar(UUID unidadeId, UUID id) { return mapper.paraResponseDTO(obter(unidadeId, id)); }
     @Transactional public ItemCatalogoResponseDTO criar(UUID unidadeId, ItemCatalogoRequestDTO dto) {
         validarUnidadePersonalizada(dto.unidadeMedida(), dto.unidadeMedidaPersonalizada());
