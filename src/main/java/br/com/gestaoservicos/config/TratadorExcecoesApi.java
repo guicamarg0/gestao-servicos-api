@@ -33,6 +33,7 @@ public class TratadorExcecoesApi {
     @ExceptionHandler(ResponseStatusException.class)
     ProblemDetail tratarStatus(ResponseStatusException excecao, HttpServletRequest requisicao) {
         ProblemDetail detalhe = ProblemDetail.forStatusAndDetail(excecao.getStatusCode(), excecao.getReason());
+        detalhe.setProperty("code", codigoPara(excecao.getStatusCode()));
         detalhe.setProperty("path", requisicao.getRequestURI());
         return detalhe;
     }
@@ -43,7 +44,17 @@ public class TratadorExcecoesApi {
                 .findFirst().map(erro -> erro.getField() + ": " + erro.getDefaultMessage())
                 .orElse("Requisição inválida");
         ProblemDetail detalhe = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, mensagem);
+        detalhe.setProperty("code", "VALIDACAO_INVALIDA");
         detalhe.setProperty("path", requisicao.getRequestURI());
         return detalhe;
+    }
+
+    private String codigoPara(org.springframework.http.HttpStatusCode status) {
+        if (status.isSameCodeAs(HttpStatus.BAD_REQUEST)) return "REQUISICAO_INVALIDA";
+        if (status.isSameCodeAs(HttpStatus.UNAUTHORIZED)) return "NAO_AUTENTICADO";
+        if (status.isSameCodeAs(HttpStatus.FORBIDDEN)) return "ACESSO_NEGADO";
+        if (status.isSameCodeAs(HttpStatus.NOT_FOUND)) return "RECURSO_NAO_ENCONTRADO";
+        if (status.isSameCodeAs(HttpStatus.CONFLICT)) return "CONFLITO_DE_REGRA";
+        return "ERRO_DE_NEGOCIO";
     }
 }

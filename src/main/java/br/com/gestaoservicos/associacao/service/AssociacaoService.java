@@ -1,6 +1,7 @@
 package br.com.gestaoservicos.associacao.service;
 
 import br.com.gestaoservicos.associacao.dto.UsuarioUnidadeResponseDTO;
+import br.com.gestaoservicos.associacao.mapper.AssociacaoMapper;
 import br.com.gestaoservicos.associacao.model.Associacao;
 import br.com.gestaoservicos.associacao.model.Perfil;
 import br.com.gestaoservicos.associacao.repository.AssociacaoRepository;
@@ -19,17 +20,20 @@ public class AssociacaoService {
     private final AssociacaoRepository associacoes;
     private final UsuarioRepository usuarios;
     private final UnidadeRepository unidades;
+    private final AssociacaoMapper mapper;
 
-    public AssociacaoService(AssociacaoRepository associacoes, UsuarioRepository usuarios, UnidadeRepository unidades) {
+    public AssociacaoService(AssociacaoRepository associacoes, UsuarioRepository usuarios, UnidadeRepository unidades,
+                             AssociacaoMapper mapper) {
         this.associacoes = associacoes;
         this.usuarios = usuarios;
         this.unidades = unidades;
+        this.mapper = mapper;
     }
 
     @Transactional(readOnly = true)
     public List<UsuarioUnidadeResponseDTO> listarAtivos(UUID unidadeId) {
         return associacoes.findAllByUnidadeIdAndAtivaTrueOrderByUsuarioNome(unidadeId).stream()
-                .map(UsuarioUnidadeResponseDTO::de).toList();
+                .map(mapper::paraResponseDTO).toList();
     }
 
     @Transactional
@@ -43,11 +47,11 @@ public class AssociacaoService {
         if (associacaoExistente.isPresent()) {
             var associacao = associacaoExistente.get();
             associacao.reativar(perfil);
-            return UsuarioUnidadeResponseDTO.de(associacao);
+            return mapper.paraResponseDTO(associacao);
         }
         var unidade = unidades.findById(unidadeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Unidade não encontrada"));
-        return UsuarioUnidadeResponseDTO.de(associacoes.save(new Associacao(usuario, unidade, perfil)));
+        return mapper.paraResponseDTO(associacoes.save(new Associacao(usuario, unidade, perfil)));
     }
 
     @Transactional
@@ -56,7 +60,7 @@ public class AssociacaoService {
         var associacao = obterAtiva(unidadeId, associacaoId);
         validarNaoRemoveUltimoAdmin(unidadeId, associacao.getPerfil(), perfil);
         associacao.alterarPerfil(perfil);
-        return UsuarioUnidadeResponseDTO.de(associacao);
+        return mapper.paraResponseDTO(associacao);
     }
 
     @Transactional
