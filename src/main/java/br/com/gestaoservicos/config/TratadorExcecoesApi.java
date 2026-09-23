@@ -2,6 +2,7 @@ package br.com.gestaoservicos.config;
 
 import br.com.gestaoservicos.unidade.service.NomeUnidadeJaExistenteException;
 import br.com.gestaoservicos.associacao.service.RegraAssociacaoException;
+import br.com.gestaoservicos.compartilhado.erro.CodigosErroApi;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -33,7 +34,7 @@ public class TratadorExcecoesApi {
     @ExceptionHandler(ResponseStatusException.class)
     ProblemDetail tratarStatus(ResponseStatusException excecao, HttpServletRequest requisicao) {
         ProblemDetail detalhe = ProblemDetail.forStatusAndDetail(excecao.getStatusCode(), excecao.getReason());
-        detalhe.setProperty("code", codigoPara(excecao.getStatusCode()));
+        detalhe.setProperty("code", CodigosErroApi.para(excecao.getStatusCode()));
         detalhe.setProperty("path", requisicao.getRequestURI());
         return detalhe;
     }
@@ -49,12 +50,4 @@ public class TratadorExcecoesApi {
         return detalhe;
     }
 
-    private String codigoPara(org.springframework.http.HttpStatusCode status) {
-        if (status.isSameCodeAs(HttpStatus.BAD_REQUEST)) return "REQUISICAO_INVALIDA";
-        if (status.isSameCodeAs(HttpStatus.UNAUTHORIZED)) return "NAO_AUTENTICADO";
-        if (status.isSameCodeAs(HttpStatus.FORBIDDEN)) return "ACESSO_NEGADO";
-        if (status.isSameCodeAs(HttpStatus.NOT_FOUND)) return "RECURSO_NAO_ENCONTRADO";
-        if (status.isSameCodeAs(HttpStatus.CONFLICT)) return "CONFLITO_DE_REGRA";
-        return "ERRO_DE_NEGOCIO";
-    }
 }
