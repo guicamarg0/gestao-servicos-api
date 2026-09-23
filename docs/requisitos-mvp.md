@@ -73,7 +73,8 @@ EMITIDO -> RASCUNHO (nova revisão para edição)
 
 - Contratante será obrigatório para emitir um PDF comercial, mas não para salvar rascunho.
 - Dados de pagamento padrão pertencem à configuração da unidade.
-- Cada orçamento pode ajustar suas condições de pagamento e guarda uma cópia delas na revisão emitida.
+- Cada orçamento terá condições de pagamento em texto livre, iniciadas por um texto padrão configurado na unidade.
+- O usuário pode ajustar as condições apenas para aquele orçamento; a revisão emitida guarda uma cópia imutável do texto e dos dados de pagamento usados.
 - A validade é opcional. Quando preenchida, aparece no PDF e pode gerar aviso de vencimento, sem bloquear aprovação manual.
 
 ## Cadastro rápido
