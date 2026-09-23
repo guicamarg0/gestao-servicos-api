@@ -69,6 +69,12 @@ EMITIDO -> RASCUNHO (nova revisão para edição)
 - O total final não pode ser negativo.
 - A memória de cálculo deve aparecer no formulário e no PDF da revisão emitida.
 
+### PDF da revisão emitida
+
+Todo PDF de orçamento deve conter identificação e logo da unidade, número e revisão, emissão, validade quando preenchida, dados do contratante, itens, subtotais, desconto, acréscimo, total, condições de pagamento e observações comerciais.
+
+A seção visual de assinatura ou aceite do contratante será opcional por orçamento, controlada por um checkbox antes da emissão. A escolha fica congelada junto com a revisão e o respectivo PDF.
+
 ### Contratante e dados de pagamento
 
 - Contratante será obrigatório para emitir um PDF comercial, mas não para salvar rascunho.
