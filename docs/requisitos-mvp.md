@@ -68,12 +68,15 @@ EMITIDO -> RASCUNHO (nova revisão para edição)
 - Desconto geral e acréscimo geral podem ser informados em valor ou percentual sobre o subtotal.
 - O total final não pode ser negativo.
 - A memória de cálculo deve aparecer no formulário e no PDF da revisão emitida.
+- O MVP não terá cálculo ou tratamento tributário separado; os valores informados representam o valor final da proposta.
 
 ### PDF da revisão emitida
 
 Todo PDF de orçamento deve conter identificação e logo da unidade, número e revisão, emissão, validade quando preenchida, dados do contratante, itens, subtotais, desconto, acréscimo, total, condições de pagamento e observações comerciais.
 
 A seção visual de assinatura ou aceite do contratante será opcional por orçamento, controlada por um checkbox antes da emissão. A escolha fica congelada junto com a revisão e o respectivo PDF.
+
+PDF é a única exportação do MVP. Não haverá exportação para Excel nesta etapa.
 
 ### Permissões do orçamento
 
