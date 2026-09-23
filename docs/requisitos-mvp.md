@@ -78,6 +78,18 @@ O sistema terá um padrão compartilhado de cadastro rápido para relacionamento
 - Depois de salvar, o registro novo é selecionado automaticamente.
 - As regras de validação permanecem centralizadas na API.
 
+## Catálogo único de itens
+
+O sistema manterá um único cadastro de itens para compor orçamentos, com os tipos abaixo:
+
+- `MAO_DE_OBRA`: diagnóstico, instalação, manutenção, visita técnica e diária.
+- `PECA`: componentes específicos usados na execução.
+- `MATERIAL`: insumos e materiais genéricos.
+
+Todo item pertence à unidade e possui nome, descrição opcional, unidade de medida, valor padrão, código ou referência opcional e situação ativo/inativo. Itens inativos não podem ser adicionados a novos orçamentos, mas permanecem em documentos históricos.
+
+Unidades de medida iniciais: unidade, hora, diária, metro, metro quadrado, quilograma, litro e outra unidade personalizada. O orçamento pode ajustar os valores copiados do catálogo e também aceitar itens manuais sem cadastro prévio.
+
 ## Próximos módulos planejados
 
 1. Organização técnica da API: MVC, DTOs, mappers, exceções, auditoria, paginação e testes multiunidade.
