@@ -14,6 +14,20 @@ Fundação da API multiusuário e multiunidade em Java 21, Spring Boot 4.1, Post
 
 Clientes, agenda, peças, orçamentos, contratos e relatórios não fazem parte desta etapa.
 
+## Escopo canônico e evolução
+
+O escopo funcional, os fluxos, a arquitetura e a ordem das entregas estão registrados em [`docs/escopo-sistema.md`](docs/escopo-sistema.md). A fundação técnica, a autenticação e o isolamento multiunidade descritos neste README correspondem à etapa 1. Este registro documental não amplia o escopo funcional: usuários e convites, clientes, serviços, agenda, peças, despesas, orçamentos, contratos, relatórios, auditoria e notificações devem evoluir em etapas próprias e somente com aprovação.
+
+As próximas etapas devem preservar estas regras transversais:
+
+- o perfil pertence à associação entre usuário e unidade, e cada dado operacional possui `unidade_id` obrigatório;
+- a API valida unidade e perfil em todas as operações e continua sendo a autoridade final de segurança;
+- exclusões operacionais preservam histórico, documentos aprovados são versionados e ações relevantes são auditáveis;
+- valores monetários usam precisão decimal e datas consideram o fuso configurado na unidade;
+- arquivos permanentes usam storage externo, enquanto listagens, filtros e paginação são processados no back-end.
+
+Cada nova etapa deve usar branch própria, manter o contrato API–Web atualizado e incluir testes de autorização e isolamento entre unidades quando aplicável.
+
 ## Execução local
 
 Requisitos: Java 21, Maven 3.9+ e Docker.

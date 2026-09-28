@@ -4,6 +4,8 @@
 
 Este repositório contém a API do novo sistema Gestão de Serviços. O sistema será multiusuário e multiunidade. Um administrador cria uma unidade e concede acesso a outros usuários por perfil.
 
+O escopo funcional e técnico canônico está em `docs/escopo-sistema.md`. Ler esse arquivo antes de planejar ou implementar qualquer módulo funcional.
+
 ## Processo obrigatório
 
 1. Ler este arquivo antes de executar qualquer ação.
