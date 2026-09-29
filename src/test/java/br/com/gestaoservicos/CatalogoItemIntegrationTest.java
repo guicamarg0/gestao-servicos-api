@@ -26,6 +26,10 @@ class CatalogoItemIntegrationTest {
         UUID id = criar(token, unidade, new Item("MAO_DE_OBRA", "Visita técnica", "Avaliação", "HORA", null, new BigDecimal("150.00"), "VIS-01"));
         mvc.perform(get("/api/v1/catalogo-itens").header("Authorization", "Bearer " + token).header("X-Unidade-Id", unidade).param("busca", "VIS-01"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.conteudo.length()").value(1)).andExpect(jsonPath("$.conteudo[0].nome").value("Visita técnica"));
+        mvc.perform(get("/api/v1/catalogo-itens").header("Authorization", "Bearer " + token).header("X-Unidade-Id", unidade).param("tipo", "MAO_DE_OBRA"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElementos").value(1));
+        mvc.perform(get("/api/v1/catalogo-itens").header("Authorization", "Bearer " + token).header("X-Unidade-Id", unidade).param("tipo", "PECA"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElementos").value(0));
         mvc.perform(put("/api/v1/catalogo-itens/{id}", id).header("Authorization", "Bearer " + token).header("X-Unidade-Id", unidade).contentType(MediaType.APPLICATION_JSON).content(json(new Item("MATERIAL", "Cabo", null, "METRO", null, new BigDecimal("12.50"), null))))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.tipo").value("MATERIAL"));
         mvc.perform(patch("/api/v1/catalogo-itens/{id}/inativar", id).header("Authorization", "Bearer " + token).header("X-Unidade-Id", unidade))

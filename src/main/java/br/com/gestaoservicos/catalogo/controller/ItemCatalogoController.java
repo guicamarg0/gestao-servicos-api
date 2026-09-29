@@ -1,6 +1,7 @@
 package br.com.gestaoservicos.catalogo.controller;
 
 import br.com.gestaoservicos.catalogo.dto.*;
+import br.com.gestaoservicos.catalogo.model.TipoItemCatalogo;
 import br.com.gestaoservicos.catalogo.service.ItemCatalogoService;
 import br.com.gestaoservicos.compartilhado.paginacao.PaginaResponseDTO;
 import br.com.gestaoservicos.security.ContextoUnidade;
@@ -18,7 +19,7 @@ import java.util.UUID;
 public class ItemCatalogoController {
     private final ItemCatalogoService service;
     public ItemCatalogoController(ItemCatalogoService service) { this.service = service; }
-    @GetMapping @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN', 'GESTOR', 'OPERADOR', 'CONSULTA')") public PaginaResponseDTO<ItemCatalogoResponseDTO> listar(@RequestParam(required = false) String busca, @PageableDefault(sort = "nome") Pageable paginacao) { return service.listar(unidadeIdAtual(), busca, paginacao); }
+    @GetMapping @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN', 'GESTOR', 'OPERADOR', 'CONSULTA')") public PaginaResponseDTO<ItemCatalogoResponseDTO> listar(@RequestParam(required = false) String busca, @RequestParam(required = false) TipoItemCatalogo tipo, @PageableDefault(sort = "nome") Pageable paginacao) { return service.listar(unidadeIdAtual(), busca, tipo, paginacao); }
     @GetMapping("/{id}") @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN', 'GESTOR', 'OPERADOR', 'CONSULTA')") public ItemCatalogoResponseDTO consultar(@PathVariable UUID id) { return service.consultar(unidadeIdAtual(), id); }
     @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN', 'GESTOR', 'OPERADOR')") public ItemCatalogoResponseDTO criar(@Valid @RequestBody ItemCatalogoRequestDTO dto) { return service.criar(unidadeIdAtual(), dto); }
     @PutMapping("/{id}") @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN', 'GESTOR', 'OPERADOR')") public ItemCatalogoResponseDTO atualizar(@PathVariable UUID id, @Valid @RequestBody ItemCatalogoRequestDTO dto) { return service.atualizar(unidadeIdAtual(), id, dto); }
