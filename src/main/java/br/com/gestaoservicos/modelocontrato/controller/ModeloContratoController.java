@@ -11,19 +11,23 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.*;
 
 @RestController @RequestMapping("/api/v1/modelos-contrato")
 public class ModeloContratoController {
     private final ModeloContratoService service;
-    public ModeloContratoController(ModeloContratoService service) { this.service = service; }
+    private final br.com.gestaoservicos.modelocontrato.service.ImportadorDocumentoContrato importador;
+    public ModeloContratoController(ModeloContratoService service, br.com.gestaoservicos.modelocontrato.service.ImportadorDocumentoContrato importador) { this.service = service; this.importador = importador; }
     @GetMapping @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR','OPERADOR','CONSULTA')")
     public PaginaResponseDTO<ModeloContratoResponseDTO> listar(@RequestParam(required = false) StatusModeloContrato status, @PageableDefault(sort = "atualizadoEm", direction = org.springframework.data.domain.Sort.Direction.DESC) Pageable pagina) { return service.listar(unidade(), status, pagina); }
     @GetMapping("/{id}") @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR','OPERADOR','CONSULTA')")
     public ModeloContratoResponseDTO consultar(@PathVariable UUID id) { return service.consultar(unidade(), id); }
     @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR')")
     public ModeloContratoResponseDTO criar(@Valid @RequestBody ModeloContratoRequestDTO dto) { return service.criar(unidade(), dto); }
+    @PostMapping(value = "/importar-documento", consumes = MediaType.MULTIPART_FORM_DATA_VALUE) @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR')")
+    public DocumentoImportadoResponseDTO importar(@RequestParam("arquivo") MultipartFile arquivo) { return importador.importar(arquivo); }
     @PutMapping("/{id}") @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR')")
     public ModeloContratoResponseDTO atualizar(@PathVariable UUID id, @Valid @RequestBody ModeloContratoRequestDTO dto) { return service.atualizar(unidade(), id, dto); }
     @PostMapping("/{id}/publicar") @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR')")
