@@ -10,4 +10,4 @@ public record ContratoResponseDTO(UUID id, String numero, UUID contratanteId, St
         String clausulasAdicionais, LocalDate inicioVigencia, LocalDate fimVigencia,
         BigDecimal valorTotal, String condicoesPagamento, StatusContrato status, int numeroVersao,
         String assinadoPor, LocalDate assinadoEm, String canalAssinatura, String evidenciaUrl,
-        UUID modeloContratoId, String conteudoRascunho) {}
+        UUID modeloContratoId, String conteudoRascunho, UUID empresaId, String empresaContratada) {}

@@ -114,6 +114,7 @@ public class ContratoService {
                 c.getOrcamento().getId(), c.getOrcamento().getNumero(), c.getModelo(), c.getObjeto(),
                 c.getClausulasAdicionais(), c.getInicioVigencia(), c.getFimVigencia(), c.getValorTotal(),
                 c.getCondicoesPagamento(), c.getStatus(), c.getNumeroVersao(), c.getAssinadoPor(),
-                c.getAssinadoEm(), c.getCanalAssinatura(), c.getEvidenciaUrl(), c.getModeloContratoId(), c.getConteudoRascunho());
+                c.getAssinadoEm(), c.getCanalAssinatura(), c.getEvidenciaUrl(), c.getModeloContratoId(), c.getConteudoRascunho(),
+                c.getEmpresa() == null ? null : c.getEmpresa().getId(), c.getEmpresa() == null ? null : (c.getEmpresa().getNomeFantasia() == null ? c.getEmpresa().getRazaoSocial() : c.getEmpresa().getNomeFantasia()));
     }
 }
