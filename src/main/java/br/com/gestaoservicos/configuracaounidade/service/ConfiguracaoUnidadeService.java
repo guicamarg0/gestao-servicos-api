@@ -31,6 +31,14 @@ public class ConfiguracaoUnidadeService {
     }
 
     @Transactional(readOnly = true)
+    public List<FormaRecebimentoResponseDTO> listarFormasAtivas(UUID unidadeId) {
+        return configuracoes.findByUnidadeId(unidadeId)
+                .map(configuracao -> formas.findAllByConfiguracaoIdOrderByNomeExibicao(configuracao.getId())
+                        .stream().filter(FormaRecebimento::isAtiva).map(mapper::paraResponseDTO).toList())
+                .orElseGet(List::of);
+    }
+
+    @Transactional(readOnly = true)
     public DadosContratadoSnapshotDTO obterSnapshot(UUID unidadeId) {
         ConfiguracaoUnidade configuracao = configuracoes.findByUnidadeId(unidadeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Configuração da unidade não encontrada"));

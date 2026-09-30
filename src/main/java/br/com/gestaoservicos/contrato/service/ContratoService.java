@@ -1,0 +1,105 @@
+package br.com.gestaoservicos.contrato.service;
+
+import br.com.gestaoservicos.compartilhado.paginacao.PaginaResponseDTO;
+import br.com.gestaoservicos.contrato.dto.*;
+import br.com.gestaoservicos.contrato.model.*;
+import br.com.gestaoservicos.contrato.repository.ContratoRepository;
+import br.com.gestaoservicos.orcamento.model.*;
+import br.com.gestaoservicos.orcamento.repository.*;
+import br.com.gestaoservicos.unidade.repository.UnidadeRepository;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import java.util.UUID;
+
+@Service
+public class ContratoService {
+    private final ContratoRepository contratos;
+    private final OrcamentoRepository orcamentos;
+    private final RevisaoOrcamentoRepository revisoes;
+    private final UnidadeRepository unidades;
+    private final GeradorPdfContrato gerador;
+    public ContratoService(ContratoRepository contratos, OrcamentoRepository orcamentos,
+                           RevisaoOrcamentoRepository revisoes, UnidadeRepository unidades, GeradorPdfContrato gerador) {
+        this.contratos = contratos; this.orcamentos = orcamentos; this.revisoes = revisoes;
+        this.unidades = unidades; this.gerador = gerador;
+    }
+    @Transactional(readOnly = true)
+    public PaginaResponseDTO<ContratoResponseDTO> listar(UUID unidadeId, String busca, StatusContrato status, Pageable pagina) {
+        return PaginaResponseDTO.de(contratos.buscar(unidadeId, busca == null ? "" : busca.strip(), status, pagina).map(this::resposta));
+    }
+    @Transactional(readOnly = true)
+    public ContratoResponseDTO consultar(UUID unidadeId, UUID id) { return resposta(obter(unidadeId, id)); }
+    @Transactional
+    public ContratoResponseDTO criar(UUID unidadeId, ContratoRequestDTO dto) {
+        validarVigencia(dto);
+        var orcamento = orcamentos.findByIdAndUnidadeId(dto.orcamentoId(), unidadeId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Orçamento não pertence à unidade"));
+        if (orcamento.getStatus() != StatusOrcamento.APROVADO)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Somente orçamento aprovado pode gerar contrato");
+        if (contratos.existsByOrcamento_Id(orcamento.getId()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Este orçamento já possui contrato");
+        var revisao = revisoes.findByOrcamentoIdAndNumeroRevisao(orcamento.getId(), orcamento.getRevisaoAtual())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Revisão do orçamento não encontrada"));
+        if (revisao.getContratante() == null)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Orçamento sem cliente");
+        var unidade = unidades.findById(unidadeId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        var contrato = new Contrato(unidade, revisao.getContratante(), orcamento, revisao.getTotalFinal(),
+                revisao.getCondicoesPagamento(), dto.modelo(), dto.objeto(), dto.clausulasAdicionais(),
+                dto.inicioVigencia(), dto.fimVigencia());
+        return resposta(contratos.save(contrato));
+    }
+    @Transactional
+    public ContratoResponseDTO atualizar(UUID unidadeId, UUID id, ContratoRequestDTO dto) {
+        validarVigencia(dto);
+        var contrato = obter(unidadeId, id);
+        if (!contrato.getOrcamento().getId().equals(dto.orcamentoId()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A origem do contrato não pode mudar");
+        if (contrato.getStatus() != StatusContrato.RASCUNHO && contrato.getStatus() != StatusContrato.AGUARDANDO_ASSINATURA)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Contrato assinado não pode ser editado");
+        contrato.atualizar(dto.modelo(), dto.objeto(), dto.clausulasAdicionais(), dto.inicioVigencia(), dto.fimVigencia());
+        return resposta(contrato);
+    }
+    @Transactional
+    public ContratoResponseDTO enviar(UUID unidadeId, UUID id) {
+        var contrato = obter(unidadeId, id);
+        if (contrato.getStatus() != StatusContrato.RASCUNHO)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Somente rascunho pode ser enviado para assinatura");
+        contrato.enviarParaAssinatura(); return resposta(contrato);
+    }
+    @Transactional
+    public ContratoResponseDTO assinar(UUID unidadeId, UUID id, AssinaturaContratoRequestDTO dto) {
+        var contrato = obter(unidadeId, id);
+        if (contrato.getStatus() != StatusContrato.AGUARDANDO_ASSINATURA)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Contrato não está aguardando assinatura");
+        contrato.registrarAssinatura(dto.assinadoPor(), dto.assinadoEm(), dto.canalAssinatura(), dto.evidenciaUrl());
+        return resposta(contrato);
+    }
+    @Transactional
+    public ContratoResponseDTO encerrar(UUID unidadeId, UUID id) {
+        var contrato = obter(unidadeId, id);
+        if (contrato.getStatus() != StatusContrato.ATIVO)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Somente contrato ativo pode ser encerrado");
+        contrato.encerrar(); return resposta(contrato);
+    }
+    @Transactional(readOnly = true)
+    public byte[] pdf(UUID unidadeId, UUID id) { return gerador.gerar(obter(unidadeId, id)); }
+    private void validarVigencia(ContratoRequestDTO dto) {
+        if (dto.inicioVigencia().isAfter(dto.fimVigencia()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A vigência final deve ser posterior ao início");
+    }
+    private Contrato obter(UUID unidadeId, UUID id) {
+        return contratos.findByIdAndUnidade_Id(id, unidadeId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Contrato não encontrado"));
+    }
+    private ContratoResponseDTO resposta(Contrato c) {
+        return new ContratoResponseDTO(c.getId(), c.getNumero(), c.getContratante().getId(),
+                c.getContratante().getNomeFantasia() == null ? c.getContratante().getNomeRazaoSocial() : c.getContratante().getNomeFantasia(),
+                c.getOrcamento().getId(), c.getOrcamento().getNumero(), c.getModelo(), c.getObjeto(),
+                c.getClausulasAdicionais(), c.getInicioVigencia(), c.getFimVigencia(), c.getValorTotal(),
+                c.getCondicoesPagamento(), c.getStatus(), c.getNumeroVersao(), c.getAssinadoPor(),
+                c.getAssinadoEm(), c.getCanalAssinatura(), c.getEvidenciaUrl());
+    }
+}
