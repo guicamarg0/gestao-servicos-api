@@ -5,6 +5,7 @@ import br.com.gestaoservicos.contrato.dto.*;
 import br.com.gestaoservicos.contrato.model.*;
 import br.com.gestaoservicos.contrato.repository.ContratoRepository;
 import br.com.gestaoservicos.contrato.repository.ContratoSnapshotRepository;
+import br.com.gestaoservicos.empresa.repository.EmpresaRepository;
 import br.com.gestaoservicos.orcamento.model.*;
 import br.com.gestaoservicos.orcamento.repository.*;
 import br.com.gestaoservicos.unidade.repository.UnidadeRepository;
@@ -23,10 +24,11 @@ public class ContratoService {
     private final RevisaoOrcamentoRepository revisoes;
     private final UnidadeRepository unidades;
     private final GeradorPdfContrato gerador;
+    private final EmpresaRepository empresas;
     public ContratoService(ContratoRepository contratos, ContratoSnapshotRepository snapshots, OrcamentoRepository orcamentos,
-                           RevisaoOrcamentoRepository revisoes, UnidadeRepository unidades, GeradorPdfContrato gerador) {
+                           RevisaoOrcamentoRepository revisoes, UnidadeRepository unidades, GeradorPdfContrato gerador, EmpresaRepository empresas) {
         this.contratos = contratos; this.snapshots = snapshots; this.orcamentos = orcamentos; this.revisoes = revisoes;
-        this.unidades = unidades; this.gerador = gerador;
+        this.unidades = unidades; this.gerador = gerador; this.empresas = empresas;
     }
     @Transactional(readOnly = true)
     public PaginaResponseDTO<ContratoResponseDTO> listar(UUID unidadeId, String busca, StatusContrato status, Pageable pagina) {
@@ -48,9 +50,10 @@ public class ContratoService {
         if (revisao.getContratante() == null)
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Orçamento sem cliente");
         var unidade = unidades.findById(unidadeId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        var empresa = dto.empresaId() == null ? null : empresas.findByIdAndUnidadeId(dto.empresaId(), unidadeId).filter(e -> e.isAtivo()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Empresa contratada não encontrada ou inativa"));
         var contrato = new Contrato(unidade, revisao.getContratante(), orcamento, revisao.getTotalFinal(),
                 revisao.getCondicoesPagamento(), dto.modelo(), dto.objeto(), dto.clausulasAdicionais(),
-                dto.inicioVigencia(), dto.fimVigencia());
+                dto.inicioVigencia(), dto.fimVigencia(), empresa);
         contrato.atualizarRascunho(dto.modeloContratoId(), dto.conteudoRascunho());
         contrato = contratos.save(contrato); snapshots.save(new ContratoSnapshot(contrato));
         return resposta(contrato);

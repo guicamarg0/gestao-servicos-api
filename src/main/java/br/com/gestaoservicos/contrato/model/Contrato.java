@@ -2,6 +2,7 @@ package br.com.gestaoservicos.contrato.model;
 
 import br.com.gestaoservicos.compartilhado.auditoria.Auditavel;
 import br.com.gestaoservicos.contratante.model.Contratante;
+import br.com.gestaoservicos.empresa.model.Empresa;
 import br.com.gestaoservicos.orcamento.model.Orcamento;
 import br.com.gestaoservicos.unidade.model.Unidade;
 import jakarta.persistence.*;
@@ -15,6 +16,7 @@ public class Contrato extends Auditavel {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "unidade_id") private Unidade unidade;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "contratante_id") private Contratante contratante;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "orcamento_id") private Orcamento orcamento;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "empresa_id") private Empresa empresa;
     @Column(nullable = false, length = 30) private String numero;
     @Column(nullable = false, length = 120) private String modelo;
     @Column(nullable = false, length = 4000) private String objeto;
@@ -36,12 +38,13 @@ public class Contrato extends Auditavel {
     protected Contrato() {}
     public Contrato(Unidade unidade, Contratante contratante, Orcamento orcamento,
                     BigDecimal valorTotal, String condicoesPagamento, String modelo, String objeto,
-                    String clausulasAdicionais, LocalDate inicioVigencia, LocalDate fimVigencia) {
+                    String clausulasAdicionais, LocalDate inicioVigencia, LocalDate fimVigencia, Empresa empresa) {
         id = UUID.randomUUID();
         numero = "CT-" + id.toString().substring(0, 8).toUpperCase();
         this.unidade = unidade;
         this.contratante = contratante;
         this.orcamento = orcamento;
+        this.empresa = empresa;
         this.valorTotal = valorTotal;
         this.condicoesPagamento = condicoesPagamento;
         this.status = StatusContrato.RASCUNHO;
@@ -71,6 +74,7 @@ public class Contrato extends Auditavel {
     public UUID getId() { return id; }
     public Contratante getContratante() { return contratante; }
     public Orcamento getOrcamento() { return orcamento; }
+    public Empresa getEmpresa() { return empresa; }
     public String getNumero() { return numero; }
     public String getModelo() { return modelo; }
     public String getObjeto() { return objeto; }
