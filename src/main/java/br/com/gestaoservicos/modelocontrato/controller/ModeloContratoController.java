@@ -32,6 +32,10 @@ public class ModeloContratoController {
     public ModeloContratoResponseDTO atualizar(@PathVariable UUID id, @Valid @RequestBody ModeloContratoRequestDTO dto) { return service.atualizar(unidade(), id, dto); }
     @PostMapping("/{id}/publicar") @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR')")
     public ModeloContratoResponseDTO publicar(@PathVariable UUID id) { return service.publicar(unidade(), id); }
+    @PostMapping("/{id}/inativar") @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR')")
+    public ModeloContratoResponseDTO inativar(@PathVariable UUID id) { return service.inativar(unidade(), id); }
+    @PostMapping("/{id}/reativar") @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR')")
+    public ModeloContratoResponseDTO reativar(@PathVariable UUID id) { return service.reativar(unidade(), id); }
     @PostMapping("/{id}/duplicar") @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR')")
     public ModeloContratoResponseDTO duplicar(@PathVariable UUID id) { return service.duplicar(unidade(), id); }
     @GetMapping("/{id}/versoes") @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR','OPERADOR','CONSULTA')")

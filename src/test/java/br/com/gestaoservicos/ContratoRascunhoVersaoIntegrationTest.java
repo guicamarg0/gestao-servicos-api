@@ -34,6 +34,10 @@ class ContratoRascunhoVersaoIntegrationTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.numeroVersao").value(2));
         mvc.perform(get("/api/v1/modelos-contrato/{id}/versoes", modeloId).header("Authorization", bearer(token)).header("X-Unidade-Id", unidade))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2)).andExpect(jsonPath("$[0].numero").value(2)).andExpect(jsonPath("$[0].conteudo").value("Cliente @RazaoSocialCliente atualizado"));
+        mvc.perform(post("/api/v1/modelos-contrato/{id}/inativar", modeloId).header("Authorization", bearer(token)).header("X-Unidade-Id", unidade))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ARQUIVADO"));
+        mvc.perform(post("/api/v1/modelos-contrato/{id}/reativar", modeloId).header("Authorization", bearer(token)).header("X-Unidade-Id", unidade))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("PUBLICADO"));
 
         UUID orcamento = criarOrcamentoAprovado(token, unidade);
         String corpoInicial = contrato(orcamento, modeloId, "Versão inicial");

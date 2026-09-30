@@ -25,6 +25,8 @@ public class ModeloContrato extends Auditavel {
         this.nome = nome.strip(); this.descricao = descricao == null ? null : descricao.strip(); this.conteudo = conteudo.strip(); this.numeroVersao++;
     }
     public void publicar() { this.status = StatusModeloContrato.PUBLICADO; }
+    public void inativar() { this.status = StatusModeloContrato.ARQUIVADO; }
+    public void reativar() { this.status = StatusModeloContrato.PUBLICADO; }
     public UUID getId() { return id; } public String getNome() { return nome; } public String getDescricao() { return descricao; }
     public String getConteudo() { return conteudo; } public StatusModeloContrato getStatus() { return status; } public int getNumeroVersao() { return numeroVersao; }
 }

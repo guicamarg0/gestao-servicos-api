@@ -43,6 +43,8 @@ public class ModeloContratoService {
     }
     @Transactional
     public ModeloContratoResponseDTO publicar(UUID unidadeId, UUID id) { var modelo = obter(unidadeId, id); modelo.publicar(); return resposta(modelo); }
+    @Transactional public ModeloContratoResponseDTO inativar(UUID unidadeId, UUID id) { var modelo = obter(unidadeId, id); modelo.inativar(); return resposta(modelo); }
+    @Transactional public ModeloContratoResponseDTO reativar(UUID unidadeId, UUID id) { var modelo = obter(unidadeId, id); modelo.reativar(); return resposta(modelo); }
     @Transactional
     public ModeloContratoResponseDTO duplicar(UUID unidadeId, UUID id) {
         var origem = obter(unidadeId, id); var unidade = unidades.findById(unidadeId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
