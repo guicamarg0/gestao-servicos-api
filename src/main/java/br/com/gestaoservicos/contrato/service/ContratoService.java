@@ -4,6 +4,7 @@ import br.com.gestaoservicos.compartilhado.paginacao.PaginaResponseDTO;
 import br.com.gestaoservicos.contrato.dto.*;
 import br.com.gestaoservicos.contrato.model.*;
 import br.com.gestaoservicos.contrato.repository.ContratoRepository;
+import br.com.gestaoservicos.contrato.repository.ContratoSnapshotRepository;
 import br.com.gestaoservicos.orcamento.model.*;
 import br.com.gestaoservicos.orcamento.repository.*;
 import br.com.gestaoservicos.unidade.repository.UnidadeRepository;
@@ -17,13 +18,14 @@ import java.util.UUID;
 @Service
 public class ContratoService {
     private final ContratoRepository contratos;
+    private final ContratoSnapshotRepository snapshots;
     private final OrcamentoRepository orcamentos;
     private final RevisaoOrcamentoRepository revisoes;
     private final UnidadeRepository unidades;
     private final GeradorPdfContrato gerador;
-    public ContratoService(ContratoRepository contratos, OrcamentoRepository orcamentos,
+    public ContratoService(ContratoRepository contratos, ContratoSnapshotRepository snapshots, OrcamentoRepository orcamentos,
                            RevisaoOrcamentoRepository revisoes, UnidadeRepository unidades, GeradorPdfContrato gerador) {
-        this.contratos = contratos; this.orcamentos = orcamentos; this.revisoes = revisoes;
+        this.contratos = contratos; this.snapshots = snapshots; this.orcamentos = orcamentos; this.revisoes = revisoes;
         this.unidades = unidades; this.gerador = gerador;
     }
     @Transactional(readOnly = true)
@@ -49,7 +51,9 @@ public class ContratoService {
         var contrato = new Contrato(unidade, revisao.getContratante(), orcamento, revisao.getTotalFinal(),
                 revisao.getCondicoesPagamento(), dto.modelo(), dto.objeto(), dto.clausulasAdicionais(),
                 dto.inicioVigencia(), dto.fimVigencia());
-        return resposta(contratos.save(contrato));
+        contrato.atualizarRascunho(dto.modeloContratoId(), dto.conteudoRascunho());
+        contrato = contratos.save(contrato); snapshots.save(new ContratoSnapshot(contrato));
+        return resposta(contrato);
     }
     @Transactional
     public ContratoResponseDTO atualizar(UUID unidadeId, UUID id, ContratoRequestDTO dto) {
@@ -60,6 +64,8 @@ public class ContratoService {
         if (contrato.getStatus() != StatusContrato.RASCUNHO && contrato.getStatus() != StatusContrato.AGUARDANDO_ASSINATURA)
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Contrato assinado não pode ser editado");
         contrato.atualizar(dto.modelo(), dto.objeto(), dto.clausulasAdicionais(), dto.inicioVigencia(), dto.fimVigencia());
+        contrato.atualizarRascunho(dto.modeloContratoId(), dto.conteudoRascunho());
+        snapshots.save(new ContratoSnapshot(contrato));
         return resposta(contrato);
     }
     @Transactional
@@ -86,6 +92,11 @@ public class ContratoService {
     }
     @Transactional(readOnly = true)
     public byte[] pdf(UUID unidadeId, UUID id) { return gerador.gerar(obter(unidadeId, id)); }
+    @Transactional(readOnly = true)
+    public java.util.List<ContratoSnapshotResponseDTO> snapshots(UUID unidadeId, UUID id) {
+        obter(unidadeId, id);
+        return snapshots.findByContrato_IdOrderByNumeroVersaoDesc(id).stream().map(s -> new ContratoSnapshotResponseDTO(s.getId(), s.getNumeroVersao(), s.getConteudo(), s.getCriadoEm())).toList();
+    }
     private void validarVigencia(ContratoRequestDTO dto) {
         if (dto.inicioVigencia().isAfter(dto.fimVigencia()))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A vigência final deve ser posterior ao início");
@@ -100,6 +111,6 @@ public class ContratoService {
                 c.getOrcamento().getId(), c.getOrcamento().getNumero(), c.getModelo(), c.getObjeto(),
                 c.getClausulasAdicionais(), c.getInicioVigencia(), c.getFimVigencia(), c.getValorTotal(),
                 c.getCondicoesPagamento(), c.getStatus(), c.getNumeroVersao(), c.getAssinadoPor(),
-                c.getAssinadoEm(), c.getCanalAssinatura(), c.getEvidenciaUrl());
+                c.getAssinadoEm(), c.getCanalAssinatura(), c.getEvidenciaUrl(), c.getModeloContratoId(), c.getConteudoRascunho());
     }
 }

@@ -29,6 +29,8 @@ public class Contrato extends Auditavel {
     @Column(name = "assinado_em") private LocalDate assinadoEm;
     @Column(name = "canal_assinatura", length = 120) private String canalAssinatura;
     @Column(name = "evidencia_url", length = 1000) private String evidenciaUrl;
+    @Column(name = "modelo_contrato_id") private UUID modeloContratoId;
+    @Column(name = "conteudo_rascunho", columnDefinition = "text") private String conteudoRascunho;
     @Version @Column(name = "versao") private long versao;
 
     protected Contrato() {}
@@ -65,6 +67,7 @@ public class Contrato extends Auditavel {
         status = StatusContrato.ATIVO;
     }
     public void encerrar() { status = StatusContrato.ENCERRADO; }
+    public void atualizarRascunho(UUID modeloContratoId, String conteudoRascunho) { this.modeloContratoId = modeloContratoId; this.conteudoRascunho = conteudoRascunho == null || conteudoRascunho.isBlank() ? objeto + "\n\n" + (clausulasAdicionais == null ? "" : clausulasAdicionais) : conteudoRascunho.strip(); }
     public UUID getId() { return id; }
     public Contratante getContratante() { return contratante; }
     public Orcamento getOrcamento() { return orcamento; }
@@ -82,4 +85,5 @@ public class Contrato extends Auditavel {
     public LocalDate getAssinadoEm() { return assinadoEm; }
     public String getCanalAssinatura() { return canalAssinatura; }
     public String getEvidenciaUrl() { return evidenciaUrl; }
+    public UUID getModeloContratoId() { return modeloContratoId; } public String getConteudoRascunho() { return conteudoRascunho; }
 }

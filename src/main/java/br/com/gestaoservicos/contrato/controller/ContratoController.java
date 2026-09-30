@@ -25,6 +25,8 @@ public class ContratoController {
     }
     @GetMapping("/{id}") @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR','OPERADOR','CONSULTA')")
     public ContratoResponseDTO consultar(@PathVariable UUID id) { return service.consultar(unidade(), id); }
+    @GetMapping("/{id}/snapshots") @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR','OPERADOR','CONSULTA')")
+    public java.util.List<ContratoSnapshotResponseDTO> snapshots(@PathVariable UUID id) { return service.snapshots(unidade(), id); }
     @PostMapping @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR')")
     public ContratoResponseDTO criar(@Valid @RequestBody ContratoRequestDTO dto) { return service.criar(unidade(), dto); }
