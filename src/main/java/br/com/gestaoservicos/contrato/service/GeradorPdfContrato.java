@@ -16,16 +16,8 @@ public class GeradorPdfContrato {
 
     public byte[] gerar(Contrato contrato) {
         var linhas = new ArrayList<Linha>();
-        linhas.add(new Linha("CONTRATO DE PRESTACAO DE SERVICOS", 15));
-        linhas.add(new Linha("Numero: " + contrato.getNumero() + "  Versao: " + contrato.getNumeroVersao(), 10));
-        linhas.add(new Linha("Cliente: " + contrato.getContratante().getNomeRazaoSocial(), 10));
-        linhas.add(new Linha("Origem: " + contrato.getOrcamento().getNumero(), 10));
-        linhas.add(new Linha("Vigencia: " + DATA.format(contrato.getInicioVigencia()) + " a " + DATA.format(contrato.getFimVigencia()), 10));
-        linhas.add(new Linha("Valor: R$ " + contrato.getValorTotal().toPlainString(), 10));
-        linhas.add(new Linha("Modelo: " + contrato.getModelo(), 10));
-        bloco(linhas, "OBJETO", contrato.getObjeto());
-        bloco(linhas, "CLAUSULAS ADICIONAIS", contrato.getClausulasAdicionais());
-        bloco(linhas, "CONDICOES DE PAGAMENTO", contrato.getCondicoesPagamento());
+        linhas.add(new Linha("CONTRATO " + contrato.getNumero() + "  |  VERSÃO " + contrato.getNumeroVersao(), 11));
+        bloco(linhas, null, contrato.getConteudoRascunho());
         if (contrato.getAssinadoPor() != null) {
             linhas.add(new Linha("Assinado por: " + contrato.getAssinadoPor(), 10));
             linhas.add(new Linha("Data: " + DATA.format(contrato.getAssinadoEm()) + "  Canal: " + contrato.getCanalAssinatura(), 10));
@@ -62,11 +54,14 @@ public class GeradorPdfContrato {
 
     private void bloco(List<Linha> linhas, String titulo, String texto) {
         if (texto == null || texto.isBlank()) return;
-        linhas.add(new Linha(" ", 8));
-        linhas.add(new Linha(titulo, 11));
-        String normalizado = ascii(texto).replaceAll("\\s+", " ");
-        for (int i = 0; i < normalizado.length(); i += 92)
-            linhas.add(new Linha(normalizado.substring(i, Math.min(i + 92, normalizado.length())), 10));
+        if (titulo != null) linhas.add(new Linha(titulo, 11));
+        String normalizado = texto.replaceAll("(?i)<br\\s*/?>", "\\n").replaceAll("(?i)</(p|div|h[1-6]|li)>", "\\n").replaceAll("(?i)<li[^>]*>", "• ").replaceAll("<[^>]+>", "").replace("&nbsp;", " ").replace("&amp;", "&");
+        for (String paragrafo : normalizado.split("\\R")) {
+            String linha = ascii(paragrafo).trim();
+            if (linha.isEmpty()) { linhas.add(new Linha(" ", 7)); continue; }
+            while (linha.length() > 92) { int corte = linha.lastIndexOf(' ', 92); if (corte < 1) corte = 92; linhas.add(new Linha(linha.substring(0, corte), 10)); linha = linha.substring(corte).trim(); }
+            linhas.add(new Linha(linha, 10));
+        }
     }
 
     private String ascii(String texto) {

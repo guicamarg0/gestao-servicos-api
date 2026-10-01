@@ -34,6 +34,8 @@ public class ContratoController {
     public ContratoResponseDTO atualizar(@PathVariable UUID id, @Valid @RequestBody ContratoRequestDTO dto) {
         return service.atualizar(unidade(), id, dto);
     }
+    @PostMapping("/previa") @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR')")
+    public ContratoPreviaResponseDTO previa(@Valid @RequestBody ContratoPreviaRequestDTO dto) { return service.previa(unidade(), dto); }
     @PostMapping("/{id}/enviar-assinatura") @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR')")
     public ContratoResponseDTO enviar(@PathVariable UUID id) { return service.enviar(unidade(), id); }
     @PostMapping("/{id}/registrar-assinatura") @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR')")
