@@ -1,72 +1,55 @@
 package br.com.gestaoservicos.contrato.service;
 
 import br.com.gestaoservicos.contrato.model.Contrato;
-import org.apache.pdfbox.pdmodel.*;
-import org.apache.pdfbox.pdmodel.font.*;
+import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document.OutputSettings;
 import org.springframework.stereotype.Service;
-import java.io.*;
-import java.text.Normalizer;
+import java.io.ByteArrayOutputStream;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
 
 @Service
 public class GeradorPdfContrato {
     private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/uuuu");
 
     public byte[] gerar(Contrato contrato) {
-        var linhas = new ArrayList<Linha>();
-        linhas.add(new Linha("CONTRATO " + contrato.getNumero() + "  |  VERSÃO " + contrato.getNumeroVersao(), 11));
-        bloco(linhas, null, contrato.getConteudoRascunho());
-        if (contrato.getAssinadoPor() != null) {
-            linhas.add(new Linha("Assinado por: " + contrato.getAssinadoPor(), 10));
-            linhas.add(new Linha("Data: " + DATA.format(contrato.getAssinadoEm()) + "  Canal: " + contrato.getCanalAssinatura(), 10));
-        }
-        try (var documento = new PDDocument(); var saida = new ByteArrayOutputStream()) {
-            var fonte = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
-            PDPageContentStream conteudo = null;
-            float y = 770;
-            try {
-                for (var linha : linhas) {
-                    if (conteudo == null || y - linha.tamanho() - 8 < 45) {
-                        if (conteudo != null) conteudo.close();
-                        var pagina = new PDPage();
-                        documento.addPage(pagina);
-                        conteudo = new PDPageContentStream(documento, pagina);
-                        y = 770;
-                    }
-                    conteudo.beginText();
-                    conteudo.setFont(fonte, linha.tamanho());
-                    conteudo.newLineAtOffset(42, y);
-                    conteudo.showText(ascii(linha.texto()));
-                    conteudo.endText();
-                    y -= linha.tamanho() + 8;
-                }
-            } finally {
-                if (conteudo != null) conteudo.close();
-            }
-            documento.save(saida);
+        try (var saida = new ByteArrayOutputStream()) {
+            var conteudo = normalizarHtml(contrato.getConteudoRascunho());
+            String assinatura = contrato.getAssinadoPor() == null ? "" : """
+                <section class=\"assinatura\"><strong>Assinado por:</strong> %s<br/>
+                <strong>Data:</strong> %s &nbsp; <strong>Canal:</strong> %s</section>""".formatted(
+                    escapar(contrato.getAssinadoPor()), DATA.format(contrato.getAssinadoEm()), escapar(contrato.getCanalAssinatura()));
+            String html = """
+                <!DOCTYPE html><html><head><meta charset=\"UTF-8\" />
+                <style>
+                  @page { size: A4; margin: 22mm 18mm; }
+                  body { font-family: sans-serif; color: #102a56; font-size: 11pt; line-height: 1.5; }
+                  .cabecalho { border-bottom: 2px solid #1768e8; padding-bottom: 9px; margin-bottom: 22px; }
+                  .cabecalho h1 { font-size: 16pt; margin: 0; color: #0a2350; }
+                  .cabecalho p { color: #506990; font-size: 9pt; margin: 3px 0 0; }
+                  h1 { font-size: 18pt; } h2 { font-size: 15pt; } h3 { font-size: 12pt; }
+                  p { margin: 0 0 10px; } ul, ol { margin: 0 0 12px 20px; padding: 0; }
+                  li { margin: 0 0 4px; } strong, b { font-weight: bold; } em, i { font-style: italic; }
+                  .assinatura { margin-top: 32px; border-top: 1px solid #cad5e5; padding-top: 12px; font-size: 10pt; }
+                </style></head><body>
+                  <header class=\"cabecalho\"><h1>Contrato %s</h1><p>Versão %s · Orçamento #%s</p></header>
+                  <main>%s</main>%s
+                </body></html>""".formatted(escapar(contrato.getNumero()), contrato.getNumeroVersao(), escapar(contrato.getOrcamento().getNumero()), conteudo, assinatura);
+            new PdfRendererBuilder().withHtmlContent(html, null).toStream(saida).run();
             return saida.toByteArray();
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new IllegalStateException("Não foi possível gerar o PDF do contrato", e);
         }
     }
 
-    private void bloco(List<Linha> linhas, String titulo, String texto) {
-        if (texto == null || texto.isBlank()) return;
-        if (titulo != null) linhas.add(new Linha(titulo, 11));
-        String normalizado = texto.replaceAll("(?i)<br\\s*/?>", "\\n").replaceAll("(?i)</(p|div|h[1-6]|li)>", "\\n").replaceAll("(?i)<li[^>]*>", "• ").replaceAll("<[^>]+>", "").replace("&nbsp;", " ").replace("&amp;", "&");
-        for (String paragrafo : normalizado.split("\\R")) {
-            String linha = ascii(paragrafo).trim();
-            if (linha.isEmpty()) { linhas.add(new Linha(" ", 7)); continue; }
-            while (linha.length() > 92) { int corte = linha.lastIndexOf(' ', 92); if (corte < 1) corte = 92; linhas.add(new Linha(linha.substring(0, corte), 10)); linha = linha.substring(corte).trim(); }
-            linhas.add(new Linha(linha, 10));
-        }
+    private String normalizarHtml(String conteudo) {
+        if (conteudo == null || conteudo.isBlank()) return "<p>Contrato sem conteúdo.</p>";
+        var documento = Jsoup.parseBodyFragment(conteudo);
+        documento.outputSettings(new OutputSettings().syntax(OutputSettings.Syntax.xml));
+        return documento.body().html();
     }
 
-    private String ascii(String texto) {
-        return Normalizer.normalize(texto, Normalizer.Form.NFD).replaceAll("\\p{M}", "").replaceAll("[^\\x20-\\x7E]", "?");
+    private String escapar(String texto) {
+        return texto == null ? "" : texto.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
-
-    private record Linha(String texto, int tamanho) {}
 }
