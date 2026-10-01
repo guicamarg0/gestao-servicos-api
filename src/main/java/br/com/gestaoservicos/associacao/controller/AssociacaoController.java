@@ -3,6 +3,7 @@ package br.com.gestaoservicos.associacao.controller;
 import br.com.gestaoservicos.associacao.dto.AdicionarUsuarioUnidadeRequestDTO;
 import br.com.gestaoservicos.associacao.dto.AtualizarPerfilAssociacaoRequestDTO;
 import br.com.gestaoservicos.associacao.dto.UsuarioUnidadeResponseDTO;
+import br.com.gestaoservicos.associacao.dto.CriarUsuarioUnidadeRequestDTO;
 import br.com.gestaoservicos.associacao.service.AssociacaoService;
 import br.com.gestaoservicos.security.ContextoUnidade;
 import jakarta.validation.Valid;
@@ -29,6 +30,12 @@ public class AssociacaoController {
     @ResponseStatus(HttpStatus.CREATED)
     UsuarioUnidadeResponseDTO adicionar(@Valid @RequestBody AdicionarUsuarioUnidadeRequestDTO requisicao) {
         return associacaoService.adicionar(unidadeIdAtual(), requisicao.email(), requisicao.perfil());
+    }
+
+    @PostMapping("/novo")
+    @ResponseStatus(HttpStatus.CREATED)
+    UsuarioUnidadeResponseDTO criarUsuario(@Valid @RequestBody CriarUsuarioUnidadeRequestDTO requisicao) {
+        return associacaoService.criarUsuario(unidadeIdAtual(), requisicao);
     }
 
     @PatchMapping("/{associacaoId}/perfil")
