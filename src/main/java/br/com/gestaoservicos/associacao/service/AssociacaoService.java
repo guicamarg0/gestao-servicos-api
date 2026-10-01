@@ -1,6 +1,7 @@
 package br.com.gestaoservicos.associacao.service;
 
 import br.com.gestaoservicos.associacao.dto.UsuarioUnidadeResponseDTO;
+import br.com.gestaoservicos.associacao.dto.CriarUsuarioUnidadeRequestDTO;
 import br.com.gestaoservicos.associacao.mapper.AssociacaoMapper;
 import br.com.gestaoservicos.associacao.model.Associacao;
 import br.com.gestaoservicos.associacao.model.Perfil;
@@ -11,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import br.com.gestaoservicos.usuario.model.Usuario;
 
 import java.util.List;
 import java.util.UUID;
@@ -21,13 +24,24 @@ public class AssociacaoService {
     private final UsuarioRepository usuarios;
     private final UnidadeRepository unidades;
     private final AssociacaoMapper mapper;
+    private final PasswordEncoder codificadorSenha;
 
     public AssociacaoService(AssociacaoRepository associacoes, UsuarioRepository usuarios, UnidadeRepository unidades,
-                             AssociacaoMapper mapper) {
+                             AssociacaoMapper mapper, PasswordEncoder codificadorSenha) {
         this.associacoes = associacoes;
         this.usuarios = usuarios;
         this.unidades = unidades;
         this.mapper = mapper;
+        this.codificadorSenha = codificadorSenha;
+    }
+
+    @Transactional
+    public UsuarioUnidadeResponseDTO criarUsuario(UUID unidadeId, CriarUsuarioUnidadeRequestDTO requisicao) {
+        var email = requisicao.email().trim().toLowerCase();
+        if (usuarios.existsByEmailIgnoreCase(email)) throw new RegraAssociacaoException("EMAIL_JA_CADASTRADO", "Já existe um usuário com este e-mail.");
+        var unidade = unidades.findById(unidadeId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Unidade não encontrada"));
+        var usuario = usuarios.save(new Usuario(requisicao.nome().trim(), email, codificadorSenha.encode(requisicao.senha())));
+        return mapper.paraResponseDTO(associacoes.save(new Associacao(usuario, unidade, requisicao.perfil())));
     }
 
     @Transactional(readOnly = true)
