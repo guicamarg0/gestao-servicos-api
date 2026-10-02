@@ -15,6 +15,8 @@ import java.util.UUID;
  @Column(name="inscricao_estadual",length=40) private String inscricaoEstadual;
  @Column(length=30) private String telefone; @Column(length=254) private String email;
  @Column(length=12) private String cep; @Column(length=180) private String logradouro; @Column(length=30) private String numero; @Column(length=120) private String complemento; @Column(length=120) private String bairro; @Column(length=120) private String cidade; @Column(length=2) private String estado;
+ @Column(name="logo_url", columnDefinition="text") private String logoUrl;
+ public String getLogoUrl(){return logoUrl;} public void atualizarLogo(String logo){logoUrl=logo;}
  @Column(nullable=false) private boolean ativo;
  protected Empresa() {}
  public Empresa(Unidade unidade, Empresa matriz, TipoEmpresa tipo, String razaoSocial, String nomeFantasia, String cnpj, String ie, String telefone, String email, String cep, String logradouro, String numero, String complemento, String bairro, String cidade, String estado) { id=UUID.randomUUID(); this.unidade=unidade; ativo=true; atualizar(matriz,tipo,razaoSocial,nomeFantasia,cnpj,ie,telefone,email,cep,logradouro,numero,complemento,bairro,cidade,estado); }

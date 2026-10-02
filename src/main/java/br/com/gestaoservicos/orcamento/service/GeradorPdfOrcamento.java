@@ -1,29 +1,145 @@
 package br.com.gestaoservicos.orcamento.service;
 
 import br.com.gestaoservicos.orcamento.model.*;
-import org.apache.pdfbox.pdmodel.*;
-import org.apache.pdfbox.pdmodel.font.*;
+import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.jsoup.nodes.Entities;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
-import java.io.*;
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-@Service public class GeradorPdfOrcamento {
- private static final DateTimeFormatter DATA=DateTimeFormatter.ofPattern("dd/MM/uuuu"); private final ObjectMapper json;
- public GeradorPdfOrcamento(ObjectMapper json){this.json=json;}
- public byte[] gerar(Orcamento o,RevisaoOrcamento r){try(PDDocument d=new PDDocument();ByteArrayOutputStream out=new ByteArrayOutputStream()){
-  Escritor e=new Escritor(d); e.titulo("ORCAMENTO");e.linha("Numero: "+o.getNumero()+" / Rev. "+r.getNumeroRevisao());e.linha("Emissao: "+DATA.format(LocalDate.now()));if(r.getValidade()!=null)e.linha("Validade: "+DATA.format(r.getValidade()));
-  JsonNode contratado=ler(r.getContratadoSnapshot());e.secao("CONTRATADO");e.linha(campo(contratado,"nomeRazaoSocial","Nao informado"));e.linha(campo(contratado,"documento",""));e.linha(campo(contratado,"enderecoCompleto",""));String logo=campo(contratado,"logoUrl","");if(!logo.isBlank())e.linha("Logo da unidade: "+logo);
-  JsonNode contratante=ler(r.getContratanteSnapshot());e.secao("CONTRATANTE");if(contratante==null)e.linha("Proposta sem destinatario");else{e.linha(campo(contratante,"nomeRazaoSocial",""));e.linha(campo(contratante,"documento",""));e.linha(campo(contratante,"endereco",""));for(JsonNode contato:contratante.path("contatos"))e.linha("Contato: "+campo(contato,"nome","")+" "+campo(contato,"telefone","")+" "+campo(contato,"email", ""));}
-  e.secao("ITENS");for(ItemRevisaoOrcamento i:r.getItens())e.linha(i.getDescricao()+" - "+i.getQuantidade()+" x "+moeda(i.getValorUnitario())+" = "+moeda(i.getTotal()));
-  e.secao("MEMORIA DE CALCULO");e.linha("Subtotal servicos: "+moeda(r.getSubtotalServicos()));e.linha("Subtotal materiais: "+moeda(r.getSubtotalMateriais()));e.linha("Subtotal: "+moeda(r.getSubtotal()));e.linha("Desconto: "+moeda(r.getDescontoTotal()));e.linha("Acrescimo: "+moeda(r.getAcrescimoTotal()));e.linha("TOTAL: "+moeda(r.getTotalFinal()));
-  e.secao("PAGAMENTO");e.linha(pagamentos(r.getPagamentosSnapshot()));if(r.getCondicoesPagamento()!=null)e.linha("Condicoes: "+r.getCondicoesPagamento());if(r.getObservacoesComerciais()!=null){e.secao("OBSERVACOES");e.linha(r.getObservacoesComerciais());}if(r.isExibirAssinatura()){e.secao("ACEITE DO CONTRATANTE");e.linha("Assinatura: ______________________________________________");}e.fechar();d.save(out);return out.toByteArray();
- }catch(IOException ex){throw new IllegalStateException("Nao foi possivel gerar PDF do orcamento",ex);}}
- private JsonNode ler(String valor){if(valor==null)return null;try{return json.readTree(valor);}catch(Exception ex){throw new IllegalStateException("Snapshot invalido",ex);}}
- private String campo(JsonNode n,String chave,String padrao){return n==null?padrao:n.path(chave).asText(padrao);} private String pagamentos(String valor){JsonNode ps=ler(valor);if(ps==null||!ps.isArray()||ps.isEmpty())return "Nao informado";List<String> ls=new ArrayList<>();for(JsonNode p:ps)ls.add(campo(p,"nomeExibicao","")+": "+campo(p,"instrucoes",""));return String.join("; ",ls);}private String moeda(BigDecimal v){return "R$ "+v.setScale(2).toPlainString();}
- private static class Escritor {private final PDDocument d;private final PDFont fonte=new PDType1Font(Standard14Fonts.FontName.HELVETICA);private PDPageContentStream tela;private float y;Escritor(PDDocument d)throws IOException{this.d=d;novaPagina();}void titulo(String s)throws IOException{escrever(s,16);y-=8;}void secao(String s)throws IOException{y-=10;escrever(s,12);}void linha(String s)throws IOException{for(String p:quebrar(s,92))escrever(p,9);}void fechar()throws IOException{tela.close();}private void novaPagina()throws IOException{if(tela!=null)tela.close();PDPage p=new PDPage();d.addPage(p);tela=new PDPageContentStream(d,p);y=770;}private void escrever(String s,int t)throws IOException{if(y<45)novaPagina();tela.beginText();tela.setFont(fonte,t);tela.newLineAtOffset(42,y);tela.showText(ascii(s));tela.endText();y-=t+4;}private List<String> quebrar(String s,int limite){List<String> ls=new ArrayList<>();String a="";for(String p:s.split("\\s+")){if((a+" "+p).length()>limite){if(!a.isEmpty())ls.add(a);a=p;}else a=a.isEmpty()?p:a+" "+p;}if(!a.isEmpty())ls.add(a);return ls;}private String ascii(String s){return java.text.Normalizer.normalize(s,java.text.Normalizer.Form.NFD).replaceAll("\\p{M}","").replaceAll("[^\\x20-\\x7E]","?");}}
+@Service
+public class GeradorPdfOrcamento {
+    private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/uuuu");
+    private final ObjectMapper json;
+    public GeradorPdfOrcamento(ObjectMapper json) { this.json = json; }
+
+    public byte[] gerar(Orcamento orcamento, RevisaoOrcamento revisao) {
+        var emitente = ler(revisao.getContratadoSnapshot());
+        var cliente = ler(revisao.getContratanteSnapshot());
+        StringBuilder itens = new StringBuilder();
+        int numero = 1;
+        for (var item : revisao.getItens()) {
+            itens.append("<tr><td class='centro'>").append(numero++)
+                .append("</td><td>").append(texto(item.getDescricao()))
+                .append("</td><td class='centro'>").append(decimal(item.getQuantidade()))
+                .append("</td><td class='valor'>").append(moeda(item.getValorUnitario()))
+                .append("</td><td class='valor'>").append(moeda(item.getTotal())).append("</td></tr>");
+        }
+        String ajustes = "";
+        if (revisao.getDescontoTotal().signum() != 0 || revisao.getAcrescimoTotal().signum() != 0) {
+            ajustes = total("Subtotal", revisao.getSubtotal(), "")
+                + total("Desconto", revisao.getDescontoTotal().negate(), "")
+                + total("Acréscimo", revisao.getAcrescimoTotal(), "");
+        }
+        String logo = campo(emitente, "logoUrl", "");
+        // Logos enviadas pelo cadastro são incorporadas, sem acesso a URLs externas.
+        String marca = logo.matches("data:image/(png|jpeg);base64,[A-Za-z0-9+/=]+")
+            ? "<img class='logo' src='" + logo + "' alt='' />" : "";
+        String html = """
+            <!DOCTYPE html><html><head><meta charset="UTF-8" />
+            <style>
+            @page { size:A4; margin:15mm 15mm 43mm; @bottom-center { content:'Página ' counter(page) ' de ' counter(pages); font-family:'Noto Sans'; font-size:8pt; color:#777; } }
+            body { font-family:'Noto Sans'; font-size:9pt; color:#222; line-height:1.4; }
+            .marca { height:16mm; border-bottom:2px solid #b18b30; margin-bottom:8px; }
+            .logo { max-width:34mm; max-height:14mm; }
+            h1 { color:#203b68; font-size:20pt; margin:0 0 6px; }
+            .numero { border-bottom:1px solid #ccc; padding-bottom:9px; margin-bottom:12px; font-size:11pt; }
+            .codigo { color:#b18b30; font-weight:bold; }
+            table { width:100%%; border-collapse:collapse; table-layout:fixed; }
+            td,th { border:1px solid #c8c8c8; padding:5px 7px; vertical-align:top; word-wrap:break-word; }
+            .partes { margin-bottom:22px; page-break-inside:avoid; }
+            .partes td { background:#f2f2f2; width:50%%; }
+            .rotulo { color:#203b68; font-weight:bold; font-size:8pt; margin-bottom:14px; }
+            .nome { font-weight:bold; margin-bottom:2px; }
+            .itens { -fs-table-paginate:paginate; }
+            .itens th { text-align:center; background:#f0f0f0; font-size:9pt; vertical-align:middle; }
+            .itens tr { page-break-inside:avoid; }
+            .itens td { font-size:8pt; }
+            .centro { text-align:center; } .valor { text-align:right; }
+            .itens .total td { font-weight:bold; background:#f0f0f0; font-size:10pt; }
+            .total .valor { color:#203b68; }
+            h2 { color:#203b68; font-size:10pt; margin:8px 0 5px; page-break-after:avoid; }
+            .condicoes { border:1px solid #c8c8c8; padding:10px 12px; }
+            .condicoes p { margin:0 0 6px; }
+            </style></head><body>
+            <div class="marca">%s</div><h1>ORÇAMENTO</h1>
+            <div class="numero"><span class="codigo">Nº %s</span> &#160; | &#160; Data: %s</div>
+            <table class="partes"><tr><td><div class="rotulo">EMITENTE</div>%s</td><td><div class="rotulo">CLIENTE</div>%s</td></tr></table>
+            <table class="itens"><colgroup><col style="width:7%%"/><col style="width:45%%"/><col style="width:9%%"/><col style="width:19%%"/><col style="width:20%%"/></colgroup>
+            <thead><tr><th>Item</th><th>Descrição</th><th>Qtde.</th><th>Valor Unitário</th><th>Valor Total</th></tr></thead>
+            <tbody>%s%s%s</tbody></table>
+            <h2>CONDIÇÕES COMERCIAIS</h2><div class="condicoes">%s</div>
+            </body></html>
+            """.formatted(marca, texto(orcamento.getNumero()), DATA.format(LocalDate.now()),
+                parte(emitente, "enderecoCompleto", "Emitente não informado"),
+                parte(cliente, "endereco", "Proposta sem destinatário"), itens, ajustes,
+                total("TOTAL DO PEDIDO", revisao.getTotalFinal(), "total"), condicoes(revisao));
+        try (var saida = new ByteArrayOutputStream()) {
+            var builder = new PdfRendererBuilder();
+            builder.useFont(() -> getClass().getResourceAsStream("/fonts/NotoSans-Regular.ttf"), "Noto Sans", 400,
+                com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder.FontStyle.NORMAL, true);
+            builder.useFont(() -> getClass().getResourceAsStream("/fonts/NotoSans-Bold.ttf"), "Noto Sans", 700,
+                com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder.FontStyle.NORMAL, true);
+            builder.withHtmlContent(html, null).toStream(saida).run();
+            try (var documento = Loader.loadPDF(saida.toByteArray());
+                 var fonteStream = getClass().getResourceAsStream("/fonts/NotoSans-Regular.ttf");
+                 var resultado = new ByteArrayOutputStream()) {
+                var fonte = PDType0Font.load(documento, fonteStream);
+                var pagina = documento.getPage(documento.getNumberOfPages() - 1);
+                try (var tela = new PDPageContentStream(documento, pagina, PDPageContentStream.AppendMode.APPEND, true, true)) {
+                    assinatura(tela, fonte, 43, campo(emitente, "nomeRazaoSocial", "Emitente"), "Contratada / Emitente");
+                    assinatura(tela, fonte, 312, campo(cliente, "nomeRazaoSocial", "Contratante"), "Contratante / Cliente");
+                }
+                documento.save(resultado);
+                return resultado.toByteArray();
+            }
+        } catch (Exception e) { throw new IllegalStateException("Não foi possível gerar o PDF do orçamento", e); }
+    }
+    private String parte(JsonNode parte, String endereco, String vazio) {
+        if (parte == null || parte.isEmpty()) return texto(vazio);
+        StringBuilder html = new StringBuilder("<div class='nome'>").append(texto(campo(parte,"nomeRazaoSocial",vazio))).append("</div>");
+        String documento = campo(parte,"documento", "");
+        if (!documento.isBlank()) html.append("<div>").append(documento.replaceAll("\\D", "").length()==11?"CPF: ":"CNPJ: ").append(texto(documentoFormatado(documento))).append("</div>");
+        html.append("<div>").append(texto(campo(parte,endereco,""))).append("</div>");
+        String contato = String.join(" · ", java.util.stream.Stream.of(campo(parte,"telefone",""),campo(parte,"email","")).filter(s->!s.isBlank()).toList());
+        if(!contato.isBlank()) html.append("<div>").append(texto(contato)).append("</div>");
+        for(var c : parte.path("contatos")) html.append("<div>").append(texto(String.join(" · ",java.util.stream.Stream.of(campo(c,"nome",""),campo(c,"telefone",""),campo(c,"email","")).filter(s->!s.isBlank()).toList()))).append("</div>");
+        return html.toString();
+    }
+    private String condicoes(RevisaoOrcamento revisao) {
+        StringBuilder html = new StringBuilder();
+        if(revisao.getValidade()!=null) html.append("<p><strong>Validade da proposta:</strong> ").append(DATA.format(revisao.getValidade())).append("</p>");
+        if(revisao.getCondicoesPagamento()!=null&&!revisao.getCondicoesPagamento().isBlank()) html.append("<p><strong>Condição de pagamento:</strong> ").append(texto(revisao.getCondicoesPagamento())).append("</p>");
+        if(revisao.getObservacoesComerciais()!=null&&!revisao.getObservacoesComerciais().isBlank()) html.append("<p>").append(texto(revisao.getObservacoesComerciais())).append("</p>");
+        return html.isEmpty()?"<p>Sem observações comerciais.</p>":html.toString();
+    }
+    private String total(String rotulo,BigDecimal valor,String classe) {return "<tr class='"+classe+"'><td colspan='4' class='valor'>"+rotulo+"</td><td class='valor'>"+moeda(valor)+"</td></tr>";}
+    private String documentoFormatado(String valor) {
+        String d=valor.replaceAll("\\D", "");
+        if(d.length()==14)return d.replaceFirst("(\\d{2})(\\d{3})(\\d{3})(\\d{4})(\\d{2})", "$1.$2.$3/$4-$5");
+        if(d.length()==11)return d.replaceFirst("(\\d{3})(\\d{3})(\\d{3})(\\d{2})", "$1.$2.$3-$4");
+        return valor;
+    }
+    private void assinatura(PDPageContentStream tela,PDType0Font fonte,float x,String nome,String papel) throws java.io.IOException {
+        float largura=240; tela.setStrokingColor(new java.awt.Color(150,150,150));tela.setNonStrokingColor(new java.awt.Color(40,40,40));
+        tela.moveTo(x,95);tela.lineTo(x+largura,95);tela.stroke();
+        var linhas=new ArrayList<String>();String linha="";
+        for(String palavra:nome.split("\\s+")){String nova=linha.isEmpty()?palavra:linha+" "+palavra;if(fonte.getStringWidth(nova)/1000*8>largura&&!linha.isEmpty()){linhas.add(linha);linha=palavra;}else linha=nova;}if(!linha.isEmpty())linhas.add(linha);
+        float y=82;for(String l:linhas){tela.beginText();tela.setFont(fonte,8);tela.newLineAtOffset(x,y);tela.showText(l);tela.endText();y-=11;}
+        tela.beginText();tela.setFont(fonte,7);tela.newLineAtOffset(x,y);tela.showText(papel);tela.endText();
+    }
+    private JsonNode ler(String valor) {if(valor==null)return null;try{return json.readTree(valor);}catch(Exception e){throw new IllegalStateException("Snapshot inválido",e);}}
+    private String campo(JsonNode n,String chave,String padrao){return n==null?padrao:n.path(chave).asText(padrao);}
+    private String texto(String valor){return Entities.escape(Objects.toString(valor, ""), new org.jsoup.nodes.Document.OutputSettings().syntax(org.jsoup.nodes.Document.OutputSettings.Syntax.xml).escapeMode(Entities.EscapeMode.xhtml)).replace("\r", "").replace("\n", "<br />");}
+    private String moeda(BigDecimal valor){return NumberFormat.getCurrencyInstance(Locale.forLanguageTag("pt-BR")).format(valor);}
+    private String decimal(BigDecimal valor){var formato=NumberFormat.getNumberInstance(Locale.forLanguageTag("pt-BR"));formato.setMaximumFractionDigits(2);return formato.format(valor);}
 }

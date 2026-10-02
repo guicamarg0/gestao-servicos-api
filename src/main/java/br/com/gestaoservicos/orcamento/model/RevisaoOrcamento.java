@@ -14,6 +14,9 @@ public class RevisaoOrcamento extends Auditavel {
     @Column(name = "numero_revisao", nullable = false) private int numeroRevisao;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private StatusOrcamento status;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "contratante_id") private Contratante contratante;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name="empresa_id") private br.com.gestaoservicos.empresa.model.Empresa empresa;
+    public br.com.gestaoservicos.empresa.model.Empresa getEmpresa(){return empresa;}
+    public void definirEmpresa(br.com.gestaoservicos.empresa.model.Empresa empresa){this.empresa=empresa;}
     private LocalDate validade;
     @Column(name = "condicoes_pagamento") private String condicoesPagamento;
     @Column(name = "observacoes_comerciais") private String observacoesComerciais;
@@ -29,7 +32,7 @@ public class RevisaoOrcamento extends Auditavel {
     @Column(name = "acrescimo_total", nullable = false, precision = 15, scale = 2) private BigDecimal acrescimoTotal = BigDecimal.ZERO;
     @Column(name = "total_final", nullable = false, precision = 15, scale = 2) private BigDecimal totalFinal = BigDecimal.ZERO;
     @Column(name = "contratante_snapshot", length = 8000) private String contratanteSnapshot;
-    @Column(name = "contratado_snapshot", length = 8000) private String contratadoSnapshot;
+    @Column(name = "contratado_snapshot", columnDefinition="text") private String contratadoSnapshot;
     @Column(name = "pagamentos_snapshot", length = 8000) private String pagamentosSnapshot;
     @Version @Column(name = "versao") private long versao;
     @OneToMany(mappedBy = "revisao", cascade = CascadeType.ALL, orphanRemoval = true) @OrderBy("ordem") private List<ItemRevisaoOrcamento> itens = new ArrayList<>();

@@ -138,7 +138,7 @@ class OrcamentoIntegrationTest {
         byte[] primeiro=mvc.perform(get("/api/v1/orcamentos/{id}/revisoes/1/pdf",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade))
                 .andExpect(status().isOk()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PDF)).andReturn().getResponse().getContentAsByteArray();
         assertThat(new String(primeiro,java.nio.charset.StandardCharsets.ISO_8859_1)).startsWith("%PDF");
-        try (var documento=Loader.loadPDF(primeiro)) { assertThat(new PDFTextStripper().getText(documento)).contains("ORCAMENTO", "Proposta sem destinatario", "MEMORIA DE CALCULO", "TOTAL:"); }
+        try (var documento=Loader.loadPDF(primeiro)) { assertThat(new PDFTextStripper().getText(documento)).contains("ORÇAMENTO", "Proposta sem destinatário", "CONDIÇÕES COMERCIAIS", "TOTAL DO PEDIDO"); }
         mvc.perform(put("/api/v1/unidades/atual/configuracao").header("Authorization",bearer(token)).header("X-Unidade-Id",unidade).contentType(MediaType.APPLICATION_JSON).content("{\"nomeRazaoSocial\":\"Nova Prestadora\",\"documento\":\"52998224725\",\"enderecoCompleto\":\"Rua B\",\"formasRecebimento\":[{\"tipo\":\"PIX\",\"nomeExibicao\":\"PIX\",\"instrucoes\":\"chave\",\"ativa\":true,\"padrao\":true}]}")) .andExpect(status().isOk());
         byte[] novamente=mvc.perform(get("/api/v1/orcamentos/{id}/revisoes/1/pdf",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
         assertThat(novamente).isEqualTo(primeiro);
@@ -166,6 +166,36 @@ class OrcamentoIntegrationTest {
         String criado=mvc.perform(post("/api/v1/orcamentos").header("Authorization",bearer(token)).header("X-Unidade-Id",unidade).contentType(MediaType.APPLICATION_JSON).content(corpo)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(); UUID id=UUID.fromString(json.readTree(criado).get("id").asText());
         mvc.perform(post("/api/v1/orcamentos/{id}/emitir",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk()); byte[] pdf=mvc.perform(get("/api/v1/orcamentos/{id}/revisoes/1/pdf",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
         try(var documento=Loader.loadPDF(pdf)){assertThat(documento.getNumberOfPages()).isGreaterThan(1);}
+    }
+
+    @Test
+    void persisteEmpresaEmitenteCopiaRevisaoEBloqueiaEmpresaDeOutraUnidade() throws Exception {
+        String token=login("orcamento.empresa@test.com"); UUID unidade=unidade(token,"Unidade Empresa PDF");
+        var logoBytes=new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(new java.awt.image.BufferedImage(12,12,java.awt.image.BufferedImage.TYPE_INT_RGB),"png",logoBytes);
+        String logo="data:image/png;base64,"+java.util.Base64.getEncoder().encodeToString(logoBytes.toByteArray());
+        String empresa=mvc.perform(post("/api/v1/empresas").header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)
+            .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(java.util.Map.of("tipo","MATRIZ","razaoSocial","Emitente Escolhida LTDA","cnpj","63047223000124","cidade","Curitiba","estado","PR","logoUrl",logo))))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String empresaId=json.readTree(empresa).get("id").asText();
+        String corpo=corpoRascunho(10).replace("{\"exibirAssinatura\"", "{\"empresaId\":\""+empresaId+"\",\"exibirAssinatura\"");
+        String criado=mvc.perform(post("/api/v1/orcamentos").header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)
+            .contentType(MediaType.APPLICATION_JSON).content(corpo)).andExpect(status().isCreated())
+            .andExpect(jsonPath("$.revisaoAtualDetalhe.empresaId").value(empresaId)).andReturn().getResponse().getContentAsString();
+        UUID id=UUID.fromString(json.readTree(criado).get("id").asText());
+        mvc.perform(post("/api/v1/orcamentos/{id}/emitir",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk());
+        String snapshot=revisoes.findByOrcamentoIdAndNumeroRevisao(id,1).orElseThrow().getContratadoSnapshot();
+        assertThat(snapshot).contains("Emitente Escolhida LTDA", "Curitiba", logo);
+        mvc.perform(put("/api/v1/empresas/{id}",empresaId).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)
+            .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(java.util.Map.of("tipo","MATRIZ","razaoSocial","Emitente Escolhida LTDA","cnpj","63047223000124","logoUrl","data:image/png;base64,AAAA"))))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/orcamentos/{id}/nova-revisao",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.revisaoAtualDetalhe.empresaId").value(empresaId));
+        mvc.perform(post("/api/v1/orcamentos/{id}/duplicar",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.revisaoAtualDetalhe.empresaId").value(empresaId));
+        UUID outra=unidade(token,"Outra Unidade Empresa PDF");
+        mvc.perform(post("/api/v1/orcamentos").header("Authorization",bearer(token)).header("X-Unidade-Id",outra)
+            .contentType(MediaType.APPLICATION_JSON).content(corpo)).andExpect(status().isNotFound());
     }
 
     private UUID criarRascunho(String token, UUID unidade, int valor) throws Exception {
