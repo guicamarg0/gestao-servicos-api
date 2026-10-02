@@ -74,6 +74,7 @@ public class Contrato extends Auditavel {
     public UUID getId() { return id; }
     public Contratante getContratante() { return contratante; }
     public Orcamento getOrcamento() { return orcamento; }
+    public void atualizarEmpresa(Empresa empresa) { this.empresa = empresa; }
     public Empresa getEmpresa() { return empresa; }
     public String getNumero() { return numero; }
     public String getModelo() { return modelo; }

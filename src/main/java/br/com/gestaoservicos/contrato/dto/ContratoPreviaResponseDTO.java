@@ -1,3 +1,3 @@
 package br.com.gestaoservicos.contrato.dto;
 
-public record ContratoPreviaResponseDTO(String conteudo) { }
+public record ContratoPreviaResponseDTO(String conteudo, String assinaturasHtml) { }

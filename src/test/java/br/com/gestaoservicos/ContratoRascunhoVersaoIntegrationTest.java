@@ -40,18 +40,38 @@ class ContratoRascunhoVersaoIntegrationTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("PUBLICADO"));
 
         UUID orcamento = criarOrcamentoAprovado(token, unidade);
-        String corpoInicial = contrato(orcamento, modeloId, "Versão inicial");
+        UUID empresaInicial = empresa(token, unidade, "Empresa Inicial LTDA", "12345678000190");
+        UUID empresaNova = empresa(token, unidade, "Empresa Nova LTDA", "12345678000270");
+        UUID outraUnidade = unidade(token, "Outra Unidade Contrato");
+        UUID empresaExterna = empresa(token, outraUnidade, "Empresa Externa LTDA", "12345678000350");
+        String corpoInicial = comEmpresa(contrato(orcamento, modeloId, "Versão inicial"), empresaInicial);
         String criado = mvc.perform(post("/api/v1/contratos").header("Authorization", bearer(token)).header("X-Unidade-Id", unidade)
                         .contentType(MediaType.APPLICATION_JSON).content(corpoInicial))
-                .andExpect(status().isCreated()).andExpect(jsonPath("$.numeroVersao").value(1)).andExpect(jsonPath("$.conteudoRascunho").value("Versão inicial"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.empresaId").value(empresaInicial.toString())).andExpect(jsonPath("$.numeroVersao").value(1)).andExpect(jsonPath("$.conteudoRascunho").value("Versão inicial"))
                 .andReturn().getResponse().getContentAsString();
         UUID contratoId = UUID.fromString(json.readTree(criado).get("id").asText());
 
         mvc.perform(put("/api/v1/contratos/{id}", contratoId).header("Authorization", bearer(token)).header("X-Unidade-Id", unidade)
-                        .contentType(MediaType.APPLICATION_JSON).content(contrato(orcamento, modeloId, "Versão revisada")))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.numeroVersao").value(2)).andExpect(jsonPath("$.conteudoRascunho").value("Versão revisada"));
+                        .contentType(MediaType.APPLICATION_JSON).content(comEmpresa(contrato(orcamento, modeloId, "Inválido"), empresaExterna)))
+                .andExpect(status().isBadRequest());
+        mvc.perform(put("/api/v1/contratos/{id}", contratoId).header("Authorization", bearer(token)).header("X-Unidade-Id", unidade)
+                        .contentType(MediaType.APPLICATION_JSON).content(comEmpresa(contrato(orcamento, modeloId, "Versão revisada"), empresaNova)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.empresaId").value(empresaNova.toString())).andExpect(jsonPath("$.empresaContratada").value("Empresa Nova LTDA")).andExpect(jsonPath("$.numeroVersao").value(2)).andExpect(jsonPath("$.conteudoRascunho").value("Versão revisada"));
+        mvc.perform(post("/api/v1/contratos/previa").header("Authorization", bearer(token)).header("X-Unidade-Id", unidade)
+                        .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(java.util.Map.of("orcamentoId", orcamento, "modeloContratoId", modeloId, "empresaId", empresaNova))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.conteudo").value("Cliente Cliente Contrato atualizado"))
+                .andExpect(jsonPath("$.assinaturasHtml").value(org.hamcrest.Matchers.containsString("Empresa Nova LTDA")));
         mvc.perform(get("/api/v1/contratos/{id}/snapshots", contratoId).header("Authorization", bearer(token)).header("X-Unidade-Id", unidade))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2)).andExpect(jsonPath("$[0].numeroVersao").value(2)).andExpect(jsonPath("$[0].conteudo").value("Versão revisada")).andExpect(jsonPath("$[1].conteudo").value("Versão inicial"));
+    }
+
+    private String comEmpresa(String corpo, UUID empresaId) {
+        return corpo.substring(0, corpo.length() - 1) + ",\"empresaId\":\"" + empresaId + "\"}";
+    }
+    private UUID empresa(String token, UUID unidade, String nome, String cnpj) throws Exception {
+        return UUID.fromString(json.readTree(mvc.perform(post("/api/v1/empresas").header("Authorization", bearer(token)).header("X-Unidade-Id", unidade)
+                .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(java.util.Map.of("tipo", "MATRIZ", "razaoSocial", nome, "cnpj", cnpj))))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText());
     }
 
     private UUID criarOrcamentoAprovado(String token, UUID unidade) throws Exception {

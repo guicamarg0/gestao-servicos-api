@@ -71,6 +71,11 @@ public class ContratoService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A origem do contrato não pode mudar");
         if (contrato.getStatus() != StatusContrato.RASCUNHO && contrato.getStatus() != StatusContrato.AGUARDANDO_ASSINATURA)
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Contrato assinado não pode ser editado");
+        if (dto.empresaId() != null) {
+            var empresa = empresas.findByIdAndUnidadeId(dto.empresaId(), unidadeId).filter(e -> e.isAtivo())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Empresa contratada não encontrada ou inativa"));
+            contrato.atualizarEmpresa(empresa);
+        }
         contrato.atualizar(dto.modelo(), dto.objeto(), dto.clausulasAdicionais(), dto.inicioVigencia(), dto.fimVigencia());
         contrato.atualizarRascunho(dto.modeloContratoId(), resolverConteudo(unidadeId, contrato, dto.modeloContratoId(), dto.conteudoRascunho()));
         snapshots.save(new ContratoSnapshot(contrato));
@@ -110,7 +115,7 @@ public class ContratoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Empresa contratada não encontrada ou inativa"));
         var unidade = unidades.findById(unidadeId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         var contrato = new Contrato(unidade, revisao.getContratante(), orcamento, revisao.getTotalFinal(), revisao.getCondicoesPagamento(), "Prévia", "Conforme modelo", null, java.time.LocalDate.now(), java.time.LocalDate.now(), empresa);
-        return new ContratoPreviaResponseDTO(resolverConteudo(unidadeId, contrato, dto.modeloContratoId(), dto.conteudoRascunho()));
+        return new ContratoPreviaResponseDTO(resolverConteudo(unidadeId, contrato, dto.modeloContratoId(), dto.conteudoRascunho()), gerador.camposAssinatura(contrato));
     }
     @Transactional(readOnly = true)
     public java.util.List<ContratoSnapshotResponseDTO> snapshots(UUID unidadeId, UUID id) {
@@ -137,12 +142,13 @@ public class ContratoService {
         String valor = "R$ " + contrato.getValorTotal().setScale(2, RoundingMode.HALF_UP).toPlainString().replace('.', ',');
         Map<String, String> variaveis = Map.ofEntries(
                 Map.entry("@RazaoSocialCliente", texto(cliente.getNomeRazaoSocial())), Map.entry("@NomeFantasiaCliente", texto(cliente.getNomeFantasia(), cliente.getNomeRazaoSocial())), Map.entry("@DocumentoCliente", texto(cliente.getDocumento())), Map.entry("@EnderecoCliente", texto(cliente.getEndereco())), Map.entry("@CidadeCliente", ""), Map.entry("@TelefoneCliente", contato == null ? "" : texto(contato.getTelefone())), Map.entry("@EmailCliente", contato == null ? "" : texto(contato.getEmail())), Map.entry("@RepresentanteCliente", contato == null ? "" : texto(contato.getNome())),
+                Map.entry("@razaoSocialEmpresa", texto(cliente.getNomeRazaoSocial())), Map.entry("@nomeEmpresaContratada", empresa == null ? "" : texto(empresa.getRazaoSocial())),
                 Map.entry("@RazaoSocialContratada", empresa == null ? "" : texto(empresa.getRazaoSocial())), Map.entry("@NomeFantasiaContratada", empresa == null ? "" : texto(empresa.getNomeFantasia(), empresa.getRazaoSocial())), Map.entry("@CNPJContratada", empresa == null ? "" : texto(empresa.getCnpj())), Map.entry("@EnderecoContratada", enderecoEmpresa), Map.entry("@CidadeContratada", cidadeEmpresa), Map.entry("@TelefoneContratada", empresa == null ? "" : texto(empresa.getTelefone())), Map.entry("@EmailContratada", empresa == null ? "" : texto(empresa.getEmail())), Map.entry("@RepresentanteContratada", ""),
                 Map.entry("@Orcamento", "Orçamento #" + contrato.getOrcamento().getNumero()), Map.entry("@DataOrcamento", ""), Map.entry("@DescricaoServico", revisao == null || revisao.getItens().isEmpty() ? texto(contrato.getObjeto()) : texto(revisao.getItens().get(0).getDescricao())), Map.entry("@ValorOrcamento", valor), Map.entry("@NumeroContrato", contrato.getNumero()),
                 Map.entry("@CondicoesPagamento", texto(contrato.getCondicoesPagamento())), Map.entry("@FormaPagamento", texto(contrato.getCondicoesPagamento())), Map.entry("@ValorEntrada", ""), Map.entry("@ValorSaldo", ""), Map.entry("@DadosBancarios", ""),
                 Map.entry("@DataInicio", contrato.getInicioVigencia().format(DateTimeFormatter.ofPattern("dd/MM/uuuu"))), Map.entry("@DataFim", contrato.getFimVigencia().format(DateTimeFormatter.ofPattern("dd/MM/uuuu"))), Map.entry("@PrazoExecucao", ""), Map.entry("@DataAssinatura", contrato.getAssinadoEm() == null ? "" : contrato.getAssinadoEm().format(DateTimeFormatter.ofPattern("dd/MM/uuuu")))
         );
-        for (var entrada : variaveis.entrySet()) base = base.replace(entrada.getKey(), entrada.getValue());
+        for (var entrada : variaveis.entrySet()) base = base.replace(entrada.getKey(), org.jsoup.nodes.Entities.escape(entrada.getValue()));
         return base;
     }
     private String texto(String valor) { return valor == null ? "" : valor; }
