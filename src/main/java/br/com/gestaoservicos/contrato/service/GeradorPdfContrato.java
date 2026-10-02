@@ -29,9 +29,9 @@ public class GeradorPdfContrato {
                   li { margin: 0 0 4px; } strong, b { font-weight: bold; } em, i { font-style: italic; }
                   table { border-collapse: collapse; width: 100%%; } td, th { border: 1px solid #cad5e5; padding: 6px; }
                 </style></head><body>
-                  <header class="cabecalho"><h1>Contrato %s</h1><p>Versão %s · Orçamento #%s</p></header>
+                  <header class="cabecalho"><h1>Contrato %s</h1><p>Orçamento #%s</p></header>
                   <main>%s</main>
-                </body></html>""".formatted(escapar(contrato.getNumero()), contrato.getNumeroVersao(), escapar(contrato.getOrcamento().getNumero()), normalizarHtml(contrato.getConteudoRascunho()));
+                </body></html>""".formatted(escapar(contrato.getNumero()), escapar(contrato.getOrcamento().getNumero()), normalizarHtml(contrato.getConteudoRascunho()));
             var builder = new PdfRendererBuilder();
             for (String familia : List.of("NotoSans", "NotoSerif", "NotoSansMono")) {
                 for (String estilo : List.of("Regular", "Bold", "Italic", "BoldItalic")) {
