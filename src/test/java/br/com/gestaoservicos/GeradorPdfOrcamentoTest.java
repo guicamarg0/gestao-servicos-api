@@ -69,4 +69,33 @@ class GeradorPdfOrcamentoTest {
             assertFalse(texto.contains("Contratante / Cliente"));
         }
     }
+    @Test void mantem_ultimo_item_total_condicoes_e_assinaturas_juntos_nas_quebras() throws Exception {
+        for(int quantidade : new int[]{12,16,20,24,28,32}) {
+            var r=revisao(quantidade);
+            var itens=new ArrayList<ItemRevisaoOrcamento>();
+            for(int n=1;n<=quantidade;n++) itens.add(new ItemRevisaoOrcamento(r,n,null,TipoItemCatalogo.PECA,
+                "Peça de teste "+n,UnidadeMedida.UNIDADE,null,BigDecimal.ONE,BigDecimal.TEN));
+            r.atualizar(null,r.getValidade(),"Pix", "Materiais destinados à manutenção de equipamento.",true,TipoAjuste.VALOR,BigDecimal.ZERO,TipoAjuste.VALOR,BigDecimal.ZERO,itens);
+            try(var d=Loader.loadPDF(new GeradorPdfOrcamento(new ObjectMapper()).gerar(r.getOrcamento(),r))){
+                var extrator=new PDFTextStripper();extrator.setStartPage(d.getNumberOfPages());extrator.setEndPage(d.getNumberOfPages());
+                String ultima=extrator.getText(d);
+                assertTrue(ultima.contains("Peça de teste "+quantidade),"Último item junto do encerramento: "+quantidade);
+                assertTrue(ultima.contains("TOTAL DO PEDIDO"));
+                assertTrue(ultima.contains("Materiais destinados"));
+                assertTrue(ultima.contains("Contratada / Emitente"));
+                assertTrue(ultima.contains("Contratante / Cliente"));
+            }
+        }
+    }
+    @Test void observacoes_extensas_nao_deixam_assinatura_sem_conteudo() throws Exception {
+        var r=revisao(16);
+        r.atualizar(null,r.getValidade(),"Pix","Observação comercial. ".repeat(180),true,TipoAjuste.VALOR,BigDecimal.ZERO,TipoAjuste.VALOR,BigDecimal.ZERO,r.getItens());
+        try(var d=Loader.loadPDF(new GeradorPdfOrcamento(new ObjectMapper()).gerar(r.getOrcamento(),r))){
+            assertTrue(d.getNumberOfPages()>1);
+            var extrator=new PDFTextStripper();extrator.setStartPage(d.getNumberOfPages());extrator.setEndPage(d.getNumberOfPages());
+            String ultima=extrator.getText(d);
+            assertTrue(ultima.contains("Observação comercial."));
+            assertTrue(ultima.contains("Contratada / Emitente"));
+        }
+    }
 }

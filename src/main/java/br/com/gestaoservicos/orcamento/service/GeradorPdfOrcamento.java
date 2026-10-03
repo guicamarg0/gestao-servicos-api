@@ -4,6 +4,7 @@ import br.com.gestaoservicos.orcamento.model.*;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.jsoup.nodes.Entities;
 import org.springframework.stereotype.Service;
@@ -27,12 +28,15 @@ public class GeradorPdfOrcamento {
         var cliente = ler(revisao.getContratanteSnapshot());
         StringBuilder itens = new StringBuilder();
         int numero = 1;
+        String ultimoItem = "";
         for (var item : revisao.getItens()) {
-            itens.append("<tr><td class='centro'>").append(numero++)
+            var linha = new StringBuilder("<tr><td class='centro'>").append(numero++)
                 .append("</td><td>").append(texto(item.getDescricao()))
                 .append("</td><td class='centro'>").append(decimal(item.getQuantidade()))
                 .append("</td><td class='valor'>").append(moeda(item.getValorUnitario()))
                 .append("</td><td class='valor'>").append(moeda(item.getTotal())).append("</td></tr>");
+            if (numero > revisao.getItens().size()) ultimoItem = linha.toString();
+            else itens.append(linha);
         }
         String ajustes = "";
         if (revisao.getDescontoTotal().signum() != 0 || revisao.getAcrescimoTotal().signum() != 0) {
@@ -49,48 +53,57 @@ public class GeradorPdfOrcamento {
             <style>
             @page { size:A4; margin:15mm 15mm 43mm; @bottom-center { content:'Página ' counter(page) ' de ' counter(pages); font-family:'Noto Sans'; font-size:8pt; color:#777; } }
             body { font-family:'Noto Sans'; font-size:9pt; color:#222; line-height:1.4; }
-            .marca { height:24mm; border-bottom:2px solid #b18b30; margin-bottom:8px; }
+            .marca { height:24mm; border-bottom:2px solid #b18b30; margin-bottom:5px; }
             .logo { max-width:54mm; max-height:22mm; }
             h1 { color:#203b68; font-size:20pt; margin:0 0 6px; }
-            .numero { border-bottom:1px solid #ccc; padding-bottom:9px; margin-bottom:12px; font-size:11pt; }
+            .numero { border-bottom:1px solid #ccc; padding-bottom:6px; margin-bottom:8px; font-size:11pt; }
             .codigo { color:#b18b30; font-weight:bold; }
             table { width:100%%; border-collapse:collapse; table-layout:fixed; }
             td,th { border:1px solid #c8c8c8; padding:5px 7px; vertical-align:top; word-wrap:break-word; }
-            .partes { margin-bottom:22px; page-break-inside:avoid; }
+            .partes { margin-bottom:12px; page-break-inside:avoid; }
             .partes td { background:#f2f2f2; width:50%%; }
-            .rotulo { color:#203b68; font-weight:bold; font-size:8pt; margin-bottom:14px; }
+            .rotulo { color:#203b68; font-weight:bold; font-size:8pt; margin-bottom:5px; }
             .nome { font-weight:bold; margin-bottom:2px; }
             .itens { -fs-table-paginate:paginate; }
             .itens th { text-align:center; background:#f0f0f0; font-size:9pt; vertical-align:middle; }
             .itens tr { page-break-inside:avoid; }
             .itens td { font-size:8pt; }
             .centro { text-align:center; } .valor { text-align:right; }
-            .itens .total td { font-weight:bold; background:#f0f0f0; font-size:10pt; }
+            .total td { font-weight:bold; background:#f0f0f0; font-size:10pt; }
             .total .valor { color:#203b68; }
             h2 { color:#203b68; font-size:10pt; margin:8px 0 5px; page-break-after:avoid; }
-            .condicoes { border:1px solid #c8c8c8; padding:10px 12px; }
+            .encerramento { page-break-inside:avoid; }
+            .condicoes { border:1px solid #c8c8c8; padding:8px 10px; page-break-inside:avoid; }
             .condicoes p { margin:0 0 6px; }
             </style></head><body>
             <div class="marca">%s</div><h1>ORÇAMENTO</h1>
             <div class="numero"><span class="codigo">Nº %s</span> &#160; | &#160; Data: %s</div>
             <table class="partes"><tr><td><div class="rotulo">EMITENTE</div>%s</td><td><div class="rotulo">CLIENTE</div>%s</td></tr></table>
+            %s
+            <div class="encerramento">
             <table class="itens"><colgroup><col style="width:7%%"/><col style="width:45%%"/><col style="width:9%%"/><col style="width:19%%"/><col style="width:20%%"/></colgroup>
-            <thead><tr><th>Item</th><th>Descrição</th><th>Qtde.</th><th>Valor Unitário</th><th>Valor Total</th></tr></thead>
+            <!--CABECALHO_FINAL-->
             <tbody>%s%s%s</tbody></table>
             <h2>CONDIÇÕES COMERCIAIS</h2><div class="condicoes">%s</div>
+            </div>
             </body></html>
             """.formatted(marca, texto(orcamento.getNumero()), DATA.format(LocalDate.now()),
                 parte(emitente, "enderecoCompleto", "Emitente não informado"),
-                parte(cliente, "endereco", "Proposta sem destinatário"), itens, ajustes,
+                parte(cliente, "endereco", "Proposta sem destinatário"), tabelaItens(itens.toString()), ultimoItem, ajustes,
                 total("TOTAL DO PEDIDO", revisao.getTotalFinal(), "total"), condicoes(revisao));
-        try (var saida = new ByteArrayOutputStream()) {
-            var builder = new PdfRendererBuilder();
-            builder.useFont(() -> getClass().getResourceAsStream("/fonts/NotoSans-Regular.ttf"), "Noto Sans", 400,
-                com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder.FontStyle.NORMAL, true);
-            builder.useFont(() -> getClass().getResourceAsStream("/fonts/NotoSans-Bold.ttf"), "Noto Sans", 700,
-                com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder.FontStyle.NORMAL, true);
-            builder.withHtmlContent(html, null).toStream(saida).run();
-            try (var documento = Loader.loadPDF(saida.toByteArray());
+        try {
+            String cabecalho = "<thead><tr><th>Item</th><th>Descrição</th><th>Qtde.</th><th>Valor Unitário</th><th>Valor Total</th></tr></thead>";
+            byte[] bytes = renderizar(html.replace("<!--CABECALHO_FINAL-->", itens.isEmpty() ? cabecalho : ""));
+            try (var previa = Loader.loadPDF(bytes)) {
+                var extrator = new PDFTextStripper();
+                extrator.setStartPage(previa.getNumberOfPages());
+                extrator.setEndPage(previa.getNumberOfPages());
+                String ultimaPagina = extrator.getText(previa);
+                if (previa.getNumberOfPages() > 1 && ultimaPagina.contains("TOTAL DO PEDIDO")
+                        && !ultimaPagina.contains("Valor Unitário"))
+                    bytes = renderizar(html.replace("<!--CABECALHO_FINAL-->", cabecalho));
+            }
+            try (var documento = Loader.loadPDF(bytes);
                  var fonteStream = getClass().getResourceAsStream("/fonts/NotoSans-Regular.ttf");
                  var resultado = new ByteArrayOutputStream()) {
                 var fonte = PDType0Font.load(documento, fonteStream);
@@ -103,6 +116,23 @@ public class GeradorPdfOrcamento {
                 return resultado.toByteArray();
             }
         } catch (Exception e) { throw new IllegalStateException("Não foi possível gerar o PDF do orçamento", e); }
+    }
+    private byte[] renderizar(String html) throws Exception {
+        try (var saida = new ByteArrayOutputStream()) {
+            var builder = new PdfRendererBuilder();
+            builder.useFont(() -> getClass().getResourceAsStream("/fonts/NotoSans-Regular.ttf"), "Noto Sans", 400,
+                com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder.FontStyle.NORMAL, true);
+            builder.useFont(() -> getClass().getResourceAsStream("/fonts/NotoSans-Bold.ttf"), "Noto Sans", 700,
+                com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder.FontStyle.NORMAL, true);
+            builder.withHtmlContent(html, null).toStream(saida).run();
+            return saida.toByteArray();
+        }
+    }
+    private String tabelaItens(String linhas) {
+        if (linhas.isEmpty()) return "";
+        return "<table class='itens'><colgroup><col style='width:7%'/><col style='width:45%'/><col style='width:9%'/><col style='width:19%'/><col style='width:20%'/></colgroup>"
+            + "<thead><tr><th>Item</th><th>Descrição</th><th>Qtde.</th><th>Valor Unitário</th><th>Valor Total</th></tr></thead><tbody>"
+            + linhas + "</tbody></table>";
     }
     private String parte(JsonNode parte, String endereco, String vazio) {
         if (parte == null || parte.isEmpty()) return texto(vazio);
