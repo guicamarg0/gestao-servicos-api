@@ -49,8 +49,8 @@ public class GeradorPdfOrcamento {
             <style>
             @page { size:A4; margin:15mm 15mm 43mm; @bottom-center { content:'Página ' counter(page) ' de ' counter(pages); font-family:'Noto Sans'; font-size:8pt; color:#777; } }
             body { font-family:'Noto Sans'; font-size:9pt; color:#222; line-height:1.4; }
-            .marca { height:20mm; border-bottom:2px solid #b18b30; margin-bottom:8px; }
-            .logo { max-width:44mm; max-height:18mm; }
+            .marca { height:24mm; border-bottom:2px solid #b18b30; margin-bottom:8px; }
+            .logo { max-width:54mm; max-height:22mm; }
             h1 { color:#203b68; font-size:20pt; margin:0 0 6px; }
             .numero { border-bottom:1px solid #ccc; padding-bottom:9px; margin-bottom:12px; font-size:11pt; }
             .codigo { color:#b18b30; font-weight:bold; }
