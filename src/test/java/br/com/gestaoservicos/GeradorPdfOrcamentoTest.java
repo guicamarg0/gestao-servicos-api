@@ -56,4 +56,17 @@ class GeradorPdfOrcamentoTest {
             }
         }
     }
+    @Test void omite_assinaturas_pagamento_e_referencia_quando_desmarcados() throws Exception {
+        var r=revisao(1);
+        r.atualizar(null,r.getValidade(),"Pagamento exclusivo", "Observação visível",false,TipoAjuste.VALOR,BigDecimal.ZERO,TipoAjuste.VALOR,BigDecimal.ZERO,r.getItens());
+        r.definirOpcoesPdf(false,"Nome interno do orçamento");
+        try(var d=Loader.loadPDF(new GeradorPdfOrcamento(new ObjectMapper()).gerar(r.getOrcamento(),r))){
+            var texto=new PDFTextStripper().getText(d);
+            assertTrue(texto.contains("Observação visível"));
+            assertFalse(texto.contains("Pagamento exclusivo"));
+            assertFalse(texto.contains("Nome interno do orçamento"));
+            assertFalse(texto.contains("Contratada / Emitente"));
+            assertFalse(texto.contains("Contratante / Cliente"));
+        }
+    }
 }

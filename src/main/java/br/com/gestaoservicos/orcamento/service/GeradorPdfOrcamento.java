@@ -95,7 +95,7 @@ public class GeradorPdfOrcamento {
                  var resultado = new ByteArrayOutputStream()) {
                 var fonte = PDType0Font.load(documento, fonteStream);
                 var pagina = documento.getPage(documento.getNumberOfPages() - 1);
-                try (var tela = new PDPageContentStream(documento, pagina, PDPageContentStream.AppendMode.APPEND, true, true)) {
+                if(revisao.isExibirAssinatura()) try (var tela = new PDPageContentStream(documento, pagina, PDPageContentStream.AppendMode.APPEND, true, true)) {
                     assinatura(tela, fonte, 43, campo(emitente, "nomeRazaoSocial", "Emitente"), "Contratada / Emitente");
                     assinatura(tela, fonte, 312, campo(cliente, "nomeRazaoSocial", "Contratante"), "Contratante / Cliente");
                 }
@@ -118,7 +118,7 @@ public class GeradorPdfOrcamento {
     private String condicoes(RevisaoOrcamento revisao) {
         StringBuilder html = new StringBuilder();
         if(revisao.getValidade()!=null) html.append("<p><strong>Validade da proposta:</strong> ").append(DATA.format(revisao.getValidade())).append("</p>");
-        if(revisao.getCondicoesPagamento()!=null&&!revisao.getCondicoesPagamento().isBlank()) html.append("<p><strong>Condição de pagamento:</strong> ").append(texto(revisao.getCondicoesPagamento())).append("</p>");
+        if(revisao.isExibirPagamento()&&revisao.getCondicoesPagamento()!=null&&!revisao.getCondicoesPagamento().isBlank()) html.append("<p><strong>Condição de pagamento:</strong> ").append(texto(revisao.getCondicoesPagamento())).append("</p>");
         if(revisao.getObservacoesComerciais()!=null&&!revisao.getObservacoesComerciais().isBlank()) html.append("<p>").append(texto(revisao.getObservacoesComerciais())).append("</p>");
         return html.isEmpty()?"<p>Sem observações comerciais.</p>":html.toString();
     }

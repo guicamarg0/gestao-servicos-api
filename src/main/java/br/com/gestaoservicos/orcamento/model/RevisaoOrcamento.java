@@ -20,6 +20,11 @@ public class RevisaoOrcamento extends Auditavel {
     private LocalDate validade;
     @Column(name = "condicoes_pagamento") private String condicoesPagamento;
     @Column(name = "observacoes_comerciais") private String observacoesComerciais;
+    @Column(name="exibir_pagamento",nullable=false) private boolean exibirPagamento=true;
+    @Column(length=4000) private String referencia;
+    public boolean isExibirPagamento(){return exibirPagamento;}
+    public String getReferencia(){return referencia;}
+    public void definirOpcoesPdf(boolean pagamento,String referencia){this.exibirPagamento=pagamento;this.referencia=referencia;}
     @Column(name = "exibir_assinatura", nullable = false) private boolean exibirAssinatura;
     @Enumerated(EnumType.STRING) @Column(name = "desconto_tipo", nullable = false) private TipoAjuste descontoTipo;
     @Column(name = "desconto_valor", nullable = false, precision = 15, scale = 2) private BigDecimal descontoValor;
