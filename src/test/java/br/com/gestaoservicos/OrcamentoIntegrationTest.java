@@ -118,6 +118,7 @@ class OrcamentoIntegrationTest {
             Set<String> numeros = new HashSet<>();
             for (var tarefa : tarefas) numeros.add(json.readTree(tarefa.get()).get("numero").asText());
             assertThat(numeros).hasSize(2);
+            assertThat(numeros).allMatch(n->n.matches("ORC-[1-9][0-9]*"));
         }
     }
 

@@ -47,7 +47,9 @@ public class ContratoController {
     @GetMapping(value = "/{id}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR','OPERADOR','CONSULTA')")
     public ResponseEntity<byte[]> pdf(@PathVariable UUID id) {
-        return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=contrato-" + id + ".pdf")
+        var contrato=service.consultar(unidade(),id);
+        String nome=br.com.gestaoservicos.compartilhado.NomeDocumento.pdf(contrato.numero(),contrato.cliente());
+        return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, org.springframework.http.ContentDisposition.attachment().filename(nome).build().toString())
                 .body(service.pdf(unidade(), id));
     }
     private UUID unidade() {
