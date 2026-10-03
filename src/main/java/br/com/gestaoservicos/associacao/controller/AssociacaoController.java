@@ -17,7 +17,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/unidades/atual/usuarios")
-@PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN')")
+@PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR')")
 public class AssociacaoController {
     private final AssociacaoService associacaoService;
 
@@ -47,6 +47,14 @@ public class AssociacaoController {
     @DeleteMapping("/{associacaoId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void desativar(@PathVariable UUID associacaoId) { associacaoService.desativar(unidadeIdAtual(), associacaoId); }
+
+    @PutMapping("/{id}")
+    UsuarioUnidadeResponseDTO atualizar(@PathVariable UUID id,
+        @Valid @RequestBody br.com.gestaoservicos.associacao.dto.AtualizarUsuarioRequestDTO requisicao) {
+        return associacaoService.atualizar(unidadeIdAtual(), id, requisicao);
+    }
+    @PostMapping("/{id}/reativar")
+    UsuarioUnidadeResponseDTO reativar(@PathVariable UUID id) { return associacaoService.reativar(unidadeIdAtual(), id); }
 
     private UUID unidadeIdAtual() {
         return ContextoUnidade.atual().map(ContextoUnidade.Selecao::unidadeId)

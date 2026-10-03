@@ -39,7 +39,8 @@ public class ConfiguracaoSeguranca {
                 .sessionManagement(sessao -> sessao.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(autorizacao -> autorizacao
                         .requestMatchers(HttpMethod.POST,
-                                "/api/v1/autenticacao/cadastro", "/api/v1/autenticacao/login").permitAll()
+                                "/api/v1/autenticacao/cadastro", "/api/v1/autenticacao/login",
+                                "/api/v1/autenticacao/recuperar-senha", "/api/v1/autenticacao/redefinir-senha").permitAll()
                         .requestMatchers("/actuator/health", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> {}))

@@ -134,7 +134,7 @@ class SegurancaMultiunidadeIntegrationTest {
     }
 
     @Test
-    void perfisNaoAdministradoresNaoGerenciamUsuarios() throws Exception {
+    void gestorConsultaEquipeSemPromoverAdministradores() throws Exception {
         String tokenAdmin = cadastrarEAutenticar("Admin Permissoes", "admin.permissoes@example.com");
         UUID unidadeId = criarUnidade(tokenAdmin, "Unidade Permissoes");
         String tokenGestor = cadastrarEAutenticar("Gestor Permissoes", "gestor.permissoes@example.com");
@@ -144,6 +144,8 @@ class SegurancaMultiunidadeIntegrationTest {
                 .andExpect(status().isCreated());
         mvc.perform(get("/api/v1/unidades/atual/usuarios").header("Authorization", "Bearer " + tokenGestor)
                         .header("X-Unidade-Id", unidadeId))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/v1/unidades/atual/usuarios").header("Authorization", "Bearer " + tokenGestor).header("X-Unidade-Id", unidadeId).contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"admin.permissoes@example.com\",\"perfil\":\"ADMIN\"}"))
                 .andExpect(status().isForbidden());
     }
 

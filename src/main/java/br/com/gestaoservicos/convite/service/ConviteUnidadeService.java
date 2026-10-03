@@ -44,6 +44,9 @@ public class ConviteUnidadeService {
     }
     @Transactional
     public ConviteUnidadeResponseDTO criar(UUID unidadeId, Perfil perfil) {
+        if (perfil == Perfil.ADMIN && br.com.gestaoservicos.security.ContextoUnidade.atual()
+            .map(c->c.perfil()==Perfil.GESTOR).orElse(false))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Somente administradores podem convidar administradores.");
         var unidade = unidades.findById(unidadeId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Unidade nao encontrada"));
         String codigo = gerarCodigo();
         var convite = convites.save(new ConviteUnidade(unidade, perfil, hash(codigo), Instant.now().plus(7, ChronoUnit.DAYS)));

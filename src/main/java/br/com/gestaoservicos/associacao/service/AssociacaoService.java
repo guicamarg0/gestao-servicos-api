@@ -37,7 +37,8 @@ public class AssociacaoService {
 
     @Transactional
     public UsuarioUnidadeResponseDTO criarUsuario(UUID unidadeId, CriarUsuarioUnidadeRequestDTO requisicao) {
-        var email = requisicao.email().trim().toLowerCase();
+        validarGestor(null, requisicao.perfil());
+        var email = requisicao.email().trim().toLowerCase(java.util.Locale.ROOT);
         if (usuarios.existsByEmailIgnoreCase(email)) throw new RegraAssociacaoException("EMAIL_JA_CADASTRADO", "Já existe um usuário com este e-mail.");
         var unidade = unidades.findById(unidadeId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Unidade não encontrada"));
         var usuario = usuarios.save(new Usuario(requisicao.nome().trim(), email, codificadorSenha.encode(requisicao.senha())));
@@ -46,15 +47,17 @@ public class AssociacaoService {
 
     @Transactional(readOnly = true)
     public List<UsuarioUnidadeResponseDTO> listarAtivos(UUID unidadeId) {
-        return associacoes.findAllByUnidadeIdAndAtivaTrueOrderByUsuarioNome(unidadeId).stream()
+        return associacoes.findAllByUnidadeIdOrderByUsuarioNome(unidadeId).stream()
                 .map(mapper::paraResponseDTO).toList();
     }
 
     @Transactional
     public UsuarioUnidadeResponseDTO adicionar(UUID unidadeId, String email, Perfil perfil) {
+        validarGestor(null, perfil);
         var usuario = usuarios.findByEmailIgnoreCase(email.trim())
                 .orElseThrow(() -> new RegraAssociacaoException("USUARIO_NAO_ENCONTRADO", "Não há usuário cadastrado com este e-mail."));
         var associacaoExistente = associacoes.findByUsuarioIdAndUnidadeId(usuario.getId(), unidadeId);
+        associacaoExistente.ifPresent(a -> validarGestor(a.getPerfil(), perfil));
         if (associacaoExistente.filter(Associacao::isAtiva).isPresent()) {
             throw new RegraAssociacaoException("USUARIO_JA_POSSUI_ACESSO_UNIDADE", "Este usuário já possui acesso à unidade." );
         }
@@ -72,6 +75,7 @@ public class AssociacaoService {
     public UsuarioUnidadeResponseDTO alterarPerfil(UUID unidadeId, UUID associacaoId, Perfil perfil) {
         bloquearUnidade(unidadeId);
         var associacao = obterAtiva(unidadeId, associacaoId);
+        validarGestor(associacao.getPerfil(), perfil);
         validarNaoRemoveUltimoAdmin(unidadeId, associacao.getPerfil(), perfil);
         associacao.alterarPerfil(perfil);
         return mapper.paraResponseDTO(associacao);
@@ -81,8 +85,45 @@ public class AssociacaoService {
     public void desativar(UUID unidadeId, UUID associacaoId) {
         bloquearUnidade(unidadeId);
         var associacao = obterAtiva(unidadeId, associacaoId);
+        validarGestor(associacao.getPerfil(), null);
         validarNaoRemoveUltimoAdmin(unidadeId, associacao.getPerfil(), null);
         associacao.desativar();
+    }
+
+    @Transactional
+    public UsuarioUnidadeResponseDTO reativar(UUID unidadeId, UUID id) {
+        bloquearUnidade(unidadeId);
+        var associacao = associacoes.findByIdAndUnidadeId(id, unidadeId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado nesta unidade"));
+        validarGestor(associacao.getPerfil(), associacao.getPerfil());
+        associacao.reativar(associacao.getPerfil());
+        return mapper.paraResponseDTO(associacao);
+    }
+
+    @Transactional
+    public UsuarioUnidadeResponseDTO atualizar(UUID unidadeId, UUID id,
+            br.com.gestaoservicos.associacao.dto.AtualizarUsuarioRequestDTO dto) {
+        bloquearUnidade(unidadeId);
+        var associacao = obterAtiva(unidadeId, id);
+        validarGestor(associacao.getPerfil(), dto.perfil());
+        validarNaoRemoveUltimoAdmin(unidadeId, associacao.getPerfil(), dto.perfil());
+        var usuario = associacao.getUsuario();
+        String email = dto.email().trim().toLowerCase(java.util.Locale.ROOT);
+        if ((!usuario.getNome().equals(dto.nome().trim()) || !usuario.getEmail().equals(email))
+            && associacoes.findAllByUsuarioIdAndAtivaTrueOrderByUnidadeNome(usuario.getId()).size()>1)
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Esta conta participa de várias unidades. Nome e e-mail precisam ser alterados pelo próprio usuário.");
+        if (usuarios.findByEmailIgnoreCase(email).filter(u -> !u.getId().equals(usuario.getId())).isPresent())
+            throw new RegraAssociacaoException("EMAIL_JA_CADASTRADO", "Já existe um usuário com este e-mail.");
+        usuario.atualizarCadastro(dto.nome().trim(), email);
+        associacao.alterarPerfil(dto.perfil());
+        return mapper.paraResponseDTO(associacao);
+    }
+
+    private void validarGestor(Perfil atual, Perfil novo) {
+        if (br.com.gestaoservicos.security.ContextoUnidade.atual().map(c -> c.perfil() == Perfil.GESTOR).orElse(false)
+            && (atual == Perfil.ADMIN || novo == Perfil.ADMIN))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Somente administradores podem gerenciar administradores.");
     }
 
     private Associacao obterAtiva(UUID unidadeId, UUID associacaoId) {

@@ -52,6 +52,7 @@ public class AutenticacaoService {
                 .issuedAt(emitidoEm)
                 .expiresAt(expiraEm)
                 .claim("email", usuario.getEmail())
+                .claim("versaoSessao", usuario.getVersaoSessao())
                 .build();
         String tokenAcesso = codificadorJwt.encode(
                 JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims)).getTokenValue();

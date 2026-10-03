@@ -8,6 +8,6 @@ import org.springframework.stereotype.Component;
 public class AssociacaoMapper {
     public UsuarioUnidadeResponseDTO paraResponseDTO(Associacao associacao) {
         return new UsuarioUnidadeResponseDTO(associacao.getId(), associacao.getUsuario().getId(),
-                associacao.getUsuario().getNome(), associacao.getUsuario().getEmail(), associacao.getPerfil());
+                associacao.getUsuario().getNome(), associacao.getUsuario().getEmail(), associacao.getPerfil(), associacao.isAtiva());
     }
 }

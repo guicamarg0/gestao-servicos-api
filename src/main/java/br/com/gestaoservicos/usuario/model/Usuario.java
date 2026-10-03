@@ -19,6 +19,8 @@ public class Usuario {
     private String email;
     @Column(name = "senha_hash", nullable = false, length = 200)
     private String senhaHash;
+    @Column(name = "versao_sessao", nullable = false)
+    private int versaoSessao;
     @Column(name = "criado_em", nullable = false)
     private Instant criadoEm;
 
@@ -36,4 +38,11 @@ public class Usuario {
     public String getNome() { return nome; }
     public String getEmail() { return email; }
     public String getSenhaHash() { return senhaHash; }
+    public int getVersaoSessao() { return versaoSessao; }
+    public void atualizarCadastro(String nome, String email) {
+        this.nome = nome;
+        if (!this.email.equals(email)) versaoSessao++;
+        this.email = email;
+    }
+    public void redefinirSenha(String hash) { senhaHash = hash; versaoSessao++; }
 }

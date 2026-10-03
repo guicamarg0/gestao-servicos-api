@@ -32,21 +32,21 @@ public class ConviteUnidadeController {
     }
 
     @GetMapping("/unidades/atual/convites")
-    @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN')")
+    @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR')")
     List<ConviteUnidadeResponseDTO> listar() {
         return servico.listar(unidadeAtual());
     }
 
     @PostMapping("/unidades/atual/convites")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN')")
+    @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR')")
     ConviteUnidadeResponseDTO criar(@Valid @RequestBody CriarConviteUnidadeRequestDTO requisicao) {
         return servico.criar(unidadeAtual(), requisicao.perfil());
     }
 
     @DeleteMapping("/unidades/atual/convites/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN')")
+    @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR')")
     void revogar(@PathVariable UUID id) {
         servico.revogar(unidadeAtual(), id);
     }

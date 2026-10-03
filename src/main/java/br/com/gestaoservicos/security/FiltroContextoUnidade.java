@@ -22,10 +22,13 @@ public class FiltroContextoUnidade extends OncePerRequestFilter {
     public static final String CABECALHO_UNIDADE = "X-Unidade-Id";
     private final AssociacaoRepository associacoes;
     private final ObjectMapper mapeadorJson;
+    private final br.com.gestaoservicos.usuario.repository.UsuarioRepository usuarios;
 
-    public FiltroContextoUnidade(AssociacaoRepository associacoes, ObjectMapper mapeadorJson) {
+    public FiltroContextoUnidade(AssociacaoRepository associacoes, ObjectMapper mapeadorJson,
+            br.com.gestaoservicos.usuario.repository.UsuarioRepository usuarios) {
         this.associacoes = associacoes;
         this.mapeadorJson = mapeadorJson;
+        this.usuarios = usuarios;
     }
 
     @Override
@@ -35,6 +38,19 @@ public class FiltroContextoUnidade extends OncePerRequestFilter {
             Authentication autenticacao = org.springframework.security.core.context.SecurityContextHolder
                     .getContext().getAuthentication();
             String cabecalho = requisicao.getHeader(CABECALHO_UNIDADE);
+            if (autenticacao instanceof JwtAuthenticationToken jwt) {
+                try {
+                    var usuario = usuarios.findById(UUID.fromString(jwt.getName()));
+                    Number versao = jwt.getToken().getClaim("versaoSessao");
+                    if (usuario.isEmpty() || usuario.get().getVersaoSessao() != (versao == null ? 0 : versao.intValue())) {
+                        escreverProblema(requisicao, resposta, HttpStatus.UNAUTHORIZED, "Sessão expirada. Entre novamente.");
+                        return;
+                    }
+                } catch (IllegalArgumentException e) {
+                    escreverProblema(requisicao, resposta, HttpStatus.UNAUTHORIZED, "Sessão inválida");
+                    return;
+                }
+            }
             if (autenticacao instanceof JwtAuthenticationToken && cabecalho != null && !cabecalho.isBlank()) {
                 UUID usuarioId;
                 UUID unidadeId;

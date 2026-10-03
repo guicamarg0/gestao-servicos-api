@@ -9,6 +9,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface AssociacaoRepository extends JpaRepository<Associacao, UUID> {
+    @EntityGraph(attributePaths = "usuario")
+    List<Associacao> findAllByUnidadeIdOrderByUsuarioNome(UUID unidadeId);
+    Optional<Associacao> findByIdAndUnidadeId(UUID id, UUID unidadeId);
     @EntityGraph(attributePaths = "unidade")
     List<Associacao> findAllByUsuarioIdAndAtivaTrueOrderByUnidadeNome(UUID usuarioId);
 
