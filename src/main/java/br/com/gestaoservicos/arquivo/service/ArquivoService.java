@@ -30,11 +30,14 @@ public class ArquivoService {
             String nome=arquivo.getOriginalFilename()==null?"comprovante."+extensao:arquivo.getOriginalFilename().replaceAll("[\\\\/\\r\\n]","_");
             if(nome.length()>200)nome=nome.substring(nome.length()-200);
             var registro=new Arquivo(unidade,nome,tipo,extensao);
-            storage.salvar(registro.getCaminho(),bytes,tipo);arquivos.save(registro);
+            registro.armazenarNoBanco(bytes);arquivos.save(registro);
             return new ArquivoResponseDTO(registro.getId(),nome,tipo,"/arquivos/"+registro.getId());
         } catch(java.io.IOException e){throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Arquivo inválido. Use PDF, PNG ou JPG.");}
     }
     @Transactional(readOnly=true)
     public Arquivo consultar(UUID unidade,UUID id) {return arquivos.findByIdAndUnidadeId(id,unidade).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Arquivo não encontrado"));}
-    public byte[] conteudo(Arquivo arquivo){return storage.ler(arquivo.getCaminho());}
+    public byte[] conteudo(Arquivo arquivo){
+        byte[] bytes=arquivo.getConteudo();
+        return bytes!=null?bytes:storage.ler(arquivo.getCaminho());
+    }
 }

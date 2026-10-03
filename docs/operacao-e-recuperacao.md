@@ -28,7 +28,7 @@ Implementação de 03/10/2026, branch `feat/operacao-cadastros-recuperacao`, coo
 - GET `/api/v1/despesas` aceita `servicoId`, além dos filtros existentes.
 - GET `/api/v1/painel?de=2026-10-01&ate=2026-10-03`: período inclusivo, até 366 dias.
 - POST `/api/v1/arquivos` multipart campo `arquivo`: PDF/PNG/JPG válido, máximo 5 MB. GET `/api/v1/arquivos/{id}` exige autenticação e unidade proprietária. O comprovante guarda a referência `/arquivos/{id}`.
-- Novos PDFs emitidos de orçamento usam Storage quando configurado. Sem Storage configurado, o armazenamento atual no banco continua funcional. PDFs antigos continuam no banco; rascunhos são transitórios. Logos/snapshots existentes são preservados. Não houve migração de arquivos antigos.
+- Novos comprovantes e PDFs emitidos de orçamento são gravados diretamente no PostgreSQL em bytes, sem depender de Storage. Logos continuam em Base64. Downloads de arquivos antigos com referência ao Storage continuam compatíveis; não há migração automática desses arquivos. Rascunhos de orçamento são transitórios e snapshots existentes são preservados. Migração V21 adiciona o conteúdo binário dos comprovantes.
 
 ## Configuração externa pendente
 
@@ -49,12 +49,12 @@ Variáveis exclusivas do backend:
 | `SUPABASE_SERVICE_ROLE_KEY` | Chave service role exclusiva do servidor |
 | `SUPABASE_STORAGE_BUCKET` | Nome do bucket privado, padrão `documentos` |
 
-Para usar Supabase somente como banco, desabilitar a exposição das tabelas do sistema pela Data API ou restringir privilégios/RLS de `anon` e `authenticated`, incluindo tabelas futuras. A API Java conecta pelo JDBC e valida unidade/perfil. A chave de serviço não deve entrar em variáveis `VITE_*`. Criar bucket privado, sem URLs públicas, antes de habilitar upload. Backend aceita multipart de arquivo até 5 MB e requisição até 6 MB, ajustável pela configuração Spring `spring.servlet.multipart.max-file-size` e `max-request-size`.
+Para usar Supabase somente como banco, desabilitar a exposição das tabelas do sistema pela Data API ou restringir privilégios/RLS de `anon` e `authenticated`, incluindo tabelas futuras. A API Java conecta pelo JDBC e valida unidade/perfil. Storage e sua chave de serviço são necessários apenas para ler arquivos antigos que já tenham sido armazenados lá; uploads novos funcionam diretamente pelo banco. A chave de serviço não deve entrar em variáveis `VITE_*`. Backend aceita multipart de arquivo até 5 MB e requisição até 6 MB, ajustável pela configuração Spring `spring.servlet.multipart.max-file-size` e `max-request-size`.
 
 Para Java com conexões persistentes, usar conexão direta quando a hospedagem suportar o endereço, ou Session pooler para IPv4; obtenha a string no painel. [Guia oficial Spring Boot/Supabase](https://supabase.com/docs/guides/getting-started/quickstarts/spring-boot).
 
 Destinatários podem usar qualquer provedor de email; para enviar em produção pelo Resend, verificar domínio do remetente. [Documentação de domínios Resend](https://resend.com/docs/dashboard/domains/introduction). A aplicação responde com indisponibilidade controlada quando a integração necessária não está configurada.
 
-Frontend pode ser publicado na Vercel com `VITE_API_URL` apontando para a API. A API Spring Boot precisa de hospedagem Java separada; Supabase não hospeda esse servidor. Aplicar Flyway V17–V20 e reiniciar o backend com o código atualizado. Configurações locais preexistentes não foram sobrescritas.
+Frontend pode ser publicado na Vercel com `VITE_API_URL` apontando para a API. A API Spring Boot precisa de hospedagem Java separada; Supabase não hospeda esse servidor. Aplicar Flyway V17–V21 e reiniciar o backend com o código atualizado. Configurações locais preexistentes não foram sobrescritas.
 
-Pendências operacionais após provisionamento: validar entrega real de email, upload/download real, privilégios do banco/bucket e rotina de limpeza de uploads abandonados (sem apagar arquivos referenciados).
+Pendências operacionais após provisionamento: validar entrega real de email, privilégios e backup do banco, e rotina de limpeza de uploads abandonados (sem apagar arquivos referenciados).

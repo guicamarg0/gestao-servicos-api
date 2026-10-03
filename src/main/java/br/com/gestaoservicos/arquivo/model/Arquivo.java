@@ -8,7 +8,8 @@ public class Arquivo {
     @Column(name="unidade_id",nullable=false) private UUID unidadeId;
     @Column(nullable=false,length=200) private String nome;
     @Column(nullable=false,length=100) private String tipo;
-    @Column(nullable=false,length=500) private String caminho;
+    @Column(length=500) private String caminho;
+    @Column private byte[] conteudo;
     @Column(name="criado_em",nullable=false) private Instant criadoEm;
     protected Arquivo() {}
     public Arquivo(UUID unidadeId,String nome,String tipo,String extensao) {
@@ -16,4 +17,6 @@ public class Arquivo {
         caminho=unidadeId+"/anexos/"+id+"."+extensao;criadoEm=Instant.now();
     }
     public UUID getId(){return id;} public String getNome(){return nome;} public String getTipo(){return tipo;} public String getCaminho(){return caminho;}
+    public void armazenarNoBanco(byte[] bytes) {conteudo=bytes.clone();caminho=null;}
+    public byte[] getConteudo() {return conteudo==null?null:conteudo.clone();}
 }

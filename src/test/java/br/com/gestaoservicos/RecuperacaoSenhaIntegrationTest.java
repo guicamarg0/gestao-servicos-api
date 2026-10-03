@@ -56,9 +56,14 @@ class RecuperacaoSenhaIntegrationTest {
         var arquivo=new org.springframework.mock.web.MockMultipartFile("arquivo","comprovante.png","image/png",bytes);
         String resposta=mvc.perform(multipart("/api/v1/arquivos").file(arquivo).header("Authorization","Bearer "+token).header("X-Unidade-Id",unidade))
             .andExpect(status().isCreated()).andExpect(jsonPath("$.tipo").value("image/png")).andReturn().getResponse().getContentAsString();
-        var caminho=ArgumentCaptor.forClass(String.class);verify(storage).salvar(caminho.capture(),eq(bytes),eq("image/png"));
-        assertThat(caminho.getValue()).startsWith(unidade+"/anexos/");when(storage.ler(caminho.getValue())).thenReturn(bytes);
         String id=json.readTree(resposta).get("id").asText();
+        var registro=banco.queryForMap("select conteudo,caminho from arquivo where id=?",java.util.UUID.fromString(id));
+        assertThat((byte[])registro.get("conteudo")).isEqualTo(bytes);assertThat(registro.get("caminho")).isNull();
+        mvc.perform(get("/api/v1/arquivos/"+id).header("Authorization","Bearer "+token).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andExpect(content().bytes(bytes));
+        verifyNoInteractions(storage);
+        String legado=unidade+"/anexos/"+id+".png";
+        banco.update("update arquivo set caminho=?,conteudo=null where id=?",legado,java.util.UUID.fromString(id));
+        when(storage.ler(legado)).thenReturn(bytes);
         mvc.perform(get("/api/v1/arquivos/"+id).header("Authorization","Bearer "+token).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andExpect(content().bytes(bytes));
         String outra=criarUnidade(token,"Sem arquivos");
         mvc.perform(get("/api/v1/arquivos/"+id).header("Authorization","Bearer "+token).header("X-Unidade-Id",outra)).andExpect(status().isNotFound());
@@ -72,20 +77,21 @@ class RecuperacaoSenhaIntegrationTest {
         return json.readTree(resposta).get("id").asText();
     }
 
-    @Test void pdfEmitidoUsaStorageEPreservaDownloadDaRevisao() throws Exception {
+    @Test void pdfEmitidoUsaBancoEPreservaDownloadLegado() throws Exception {
         cadastrar("pdf.storage@test.com");String token=login("pdf.storage@test.com","senha12345");String unidade=criarUnidade(token,"PDF Storage");
         when(storage.configurado()).thenReturn(true);
         String corpo="{\"exibirAssinatura\":false,\"descontoTipo\":\"VALOR\",\"descontoValor\":0,\"acrescimoTipo\":\"VALOR\",\"acrescimoValor\":0,\"itens\":[{\"tipo\":\"MAO_DE_OBRA\",\"descricao\":\"Visita\",\"unidadeMedida\":\"HORA\",\"quantidade\":1,\"valorUnitario\":100}]}";
         String criado=mvc.perform(post("/api/v1/orcamentos").header("Authorization","Bearer "+token).header("X-Unidade-Id",unidade).contentType(MediaType.APPLICATION_JSON).content(corpo)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         String id=json.readTree(criado).get("id").asText();
         mvc.perform(post("/api/v1/orcamentos/"+id+"/emitir").header("Authorization","Bearer "+token).header("X-Unidade-Id",unidade)).andExpect(status().isOk());
-        var caminho=ArgumentCaptor.forClass(String.class);var conteudo=ArgumentCaptor.forClass(byte[].class);
-        verify(storage).salvar(caminho.capture(),conteudo.capture(),eq("application/pdf"));
-        assertThat(caminho.getValue()).startsWith(unidade+"/orcamentos/");
-        var registro=banco.queryForMap("select conteudo,caminho_storage from pdf_orcamento where caminho_storage=?",caminho.getValue());
-        assertThat(registro.get("conteudo")).isNull();assertThat(registro.get("caminho_storage")).isEqualTo(caminho.getValue());
-        when(storage.ler(caminho.getValue())).thenReturn(conteudo.getValue());
-        mvc.perform(get("/api/v1/orcamentos/"+id+"/revisoes/1/pdf").header("Authorization","Bearer "+token).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andExpect(content().bytes(conteudo.getValue()));
+        var registro=banco.queryForMap("select p.id,p.conteudo,p.caminho_storage from pdf_orcamento p join revisao_orcamento r on r.id=p.revisao_orcamento_id where r.orcamento_id=?",java.util.UUID.fromString(id));
+        byte[] bytes=(byte[])registro.get("conteudo");assertThat(bytes).isNotEmpty();assertThat(registro.get("caminho_storage")).isNull();
+        verify(storage,never()).salvar(anyString(),any(),anyString());
+        mvc.perform(get("/api/v1/orcamentos/"+id+"/revisoes/1/pdf").header("Authorization","Bearer "+token).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andExpect(content().bytes(bytes));
+        String legado=unidade+"/orcamentos/legado.pdf";
+        banco.update("update pdf_orcamento set conteudo=null,caminho_storage=? where id=?",legado,registro.get("id"));
+        when(storage.ler(legado)).thenReturn(bytes);
+        mvc.perform(get("/api/v1/orcamentos/"+id+"/revisoes/1/pdf").header("Authorization","Bearer "+token).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andExpect(content().bytes(bytes));
     }
 
     @Test void linkUsoUnicoAlteraHashERevogaSessao() throws Exception {
