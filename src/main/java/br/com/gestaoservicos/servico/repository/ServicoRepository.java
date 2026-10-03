@@ -20,10 +20,10 @@ public interface ServicoRepository extends JpaRepository<Servico, UUID> {
            "lower(c.nomeRazaoSocial) like lower(concat('%', :busca, '%')))")
     Page<Servico> buscar(UUID unidadeId, String busca, StatusServico status, Pageable pageable);
 
-    @Query("select s from Servico s where s.unidade.id = :unidadeId and s.inicioPrevisto < :ate " +
-           "and s.fimPrevisto > :de and (:responsavel is null or s.responsavel = :responsavel) " +
+    @Query("select s from Servico s where s.unidade.id = :unidadeId and s.dataProgramada < :ate " +
+           "and s.dataProgramada >= :de and (:responsavel is null or s.responsavel = :responsavel) " +
            "and s.status <> br.com.gestaoservicos.servico.model.StatusServico.CANCELADO")
-    Page<Servico> agenda(UUID unidadeId, Instant de, Instant ate, String responsavel, Pageable pageable);
+    Page<Servico> agenda(UUID unidadeId, java.time.LocalDate de, java.time.LocalDate ate, String responsavel, Pageable pageable);
 
     @Query("select count(s) from Servico s where s.unidade.id = :unidadeId and s.id <> :ignorarId " +
            "and s.responsavel = :responsavel and s.inicioPrevisto < :fim and s.fimPrevisto > :inicio " +

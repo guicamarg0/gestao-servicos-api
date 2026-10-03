@@ -22,19 +22,19 @@ class OperacoesIntegrationTest {
     @Autowired ObjectMapper json;
 
     @Test
-    void agendaDetectaConflitoEDespesaAprovadaApareceNoRelatorioSemVazarUnidade() throws Exception {
+    void agendaPermiteVariosServicosNoDiaEDespesaAprovadaSemVazarUnidade() throws Exception {
         String token = login("operacoes.fluxo@test.com");
         UUID unidade = unidade(token, "Operacoes Fluxo");
         UUID cliente = cliente(token, unidade);
         UUID primeiro = servico(token, unidade, cliente, "Primeiro");
         UUID segundo = servico(token, unidade, cliente, "Segundo");
-        String horario = "{\"inicioPrevisto\":\"2026-09-29T11:00:00Z\",\"fimPrevisto\":\"2026-09-29T13:00:00Z\",\"responsavel\":\"Carlos\"}";
+        String horario = "{\"dataProgramada\":\"2026-09-29\",\"responsavel\":\"Carlos\"}";
         mvc.perform(put("/api/v1/servicos/{id}/agendamento", primeiro).header("Authorization", bearer(token)).header("X-Unidade-Id", unidade).contentType(MediaType.APPLICATION_JSON).content(horario))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("AGENDADO"));
         mvc.perform(put("/api/v1/servicos/{id}/agendamento", segundo).header("Authorization", bearer(token)).header("X-Unidade-Id", unidade).contentType(MediaType.APPLICATION_JSON).content(horario))
-                .andExpect(status().isConflict());
-        mvc.perform(get("/api/v1/agenda?de=2026-09-29T00:00:00Z&ate=2026-09-30T00:00:00Z").header("Authorization", bearer(token)).header("X-Unidade-Id", unidade))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElementos").value(1));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.dataProgramada").value("2026-09-29"));
+        mvc.perform(get("/api/v1/agenda?de=2026-09-29T03:00:00Z&ate=2026-09-30T03:00:00Z").header("Authorization", bearer(token)).header("X-Unidade-Id", unidade))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElementos").value(2));
         mvc.perform(post("/api/v1/servicos/{id}/iniciar", primeiro).header("Authorization", bearer(token)).header("X-Unidade-Id", unidade))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("EM_ANDAMENTO"));
         mvc.perform(post("/api/v1/servicos/{id}/concluir", primeiro).header("Authorization", bearer(token)).header("X-Unidade-Id", unidade).contentType(MediaType.APPLICATION_JSON).content("{\"resumoConclusao\":\"Finalizado e testado\"}"))
@@ -85,6 +85,36 @@ class OperacoesIntegrationTest {
         mvc.perform(post("/api/v1/contratos/{id}/registrar-assinatura", id).header("Authorization", bearer(token)).header("X-Unidade-Id", unidade).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"assinadoPor\":\"Carlos\",\"assinadoEm\":\"2026-09-29\",\"canalAssinatura\":\"Eletrônica\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ATIVO"));
+    }
+
+    @Test
+    void despesasSomamItensNoServidorEFiltramPorServico() throws Exception {
+        String token=login("despesas.itens@test.com");UUID unidade=unidade(token,"Despesas itens");UUID cliente=cliente(token,unidade);
+        UUID servico=servico(token,unidade,cliente,"Com despesas"),outro=servico(token,unidade,cliente,"Sem despesas");
+        String corpo="{\"categoria\":\"Materiais\",\"descricao\":\"Compra\",\"enviarParaAprovacao\":false,\"valor\":999,\"dataDespesa\":\"2026-10-03\",\"servicoId\":\""+servico+"\",\"itens\":[{\"descricao\":\"Peça\",\"quantidade\":2,\"valorUnitario\":12.34},{\"descricao\":\"Material\",\"quantidade\":0.5,\"valorUnitario\":20}]}";
+        String resposta=mvc.perform(post("/api/v1/despesas").header("Authorization",bearer(token)).header("X-Unidade-Id",unidade).contentType(MediaType.APPLICATION_JSON).content(corpo))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.valor").value(34.68)).andExpect(jsonPath("$.itens.length()").value(2)).andReturn().getResponse().getContentAsString();
+        UUID id=UUID.fromString(json.readTree(resposta).get("id").asText());
+        mvc.perform(get("/api/v1/despesas?servicoId="+servico).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andExpect(jsonPath("$.totalElementos").value(1));
+        mvc.perform(get("/api/v1/despesas?servicoId="+outro).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andExpect(jsonPath("$.totalElementos").value(0));
+        mvc.perform(put("/api/v1/despesas/{id}",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade).contentType(MediaType.APPLICATION_JSON).content(corpo.replace("12.34","10.00")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.valor").value(30.0));
+    }
+
+    @Test
+    void painelConsideraRevisaoAtualPeriodoEUnidade() throws Exception {
+        String token=login("painel.real@test.com");UUID unidade=unidade(token,"Painel real");
+        String corpo="{\"exibirAssinatura\":false,\"descontoTipo\":\"VALOR\",\"descontoValor\":0,\"acrescimoTipo\":\"VALOR\",\"acrescimoValor\":0,\"itens\":[{\"tipo\":\"MAO_DE_OBRA\",\"descricao\":\"Visita\",\"unidadeMedida\":\"HORA\",\"quantidade\":1,\"valorUnitario\":100}]}";
+        var criado=mvc.perform(post("/api/v1/orcamentos").header("Authorization",bearer(token)).header("X-Unidade-Id",unidade).contentType(MediaType.APPLICATION_JSON).content(corpo)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String hoje=java.time.LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo")).toString();
+        String rota="/api/v1/painel?de="+hoje+"&ate="+hoje;
+        mvc.perform(get(rota).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andExpect(jsonPath("$.orcamentos").value(1)).andExpect(jsonPath("$.valorOrcamentos").value(100)).andExpect(jsonPath("$.aprovados").value(0)).andExpect(jsonPath("$.evolucao.length()").value(1));
+        UUID id=UUID.fromString(json.readTree(criado).get("id").asText());
+        mvc.perform(post("/api/v1/orcamentos/{id}/emitir",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk());
+        mvc.perform(put("/api/v1/orcamentos/{id}",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade).contentType(MediaType.APPLICATION_JSON).content(corpo.replace("100","200"))).andExpect(status().isOk());
+        mvc.perform(get(rota).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andExpect(jsonPath("$.orcamentos").value(1)).andExpect(jsonPath("$.valorOrcamentos").value(200));
+        String outro=login("painel.outra@test.com");UUID outra=unidade(outro,"Painel vazio");
+        mvc.perform(get(rota).header("Authorization",bearer(outro)).header("X-Unidade-Id",outra)).andExpect(status().isOk()).andExpect(jsonPath("$.orcamentos").value(0)).andExpect(jsonPath("$.recentes.length()").value(0));
     }
 
     private UUID cliente(String token, UUID unidade) throws Exception {

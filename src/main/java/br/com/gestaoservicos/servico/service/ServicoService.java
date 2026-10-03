@@ -41,7 +41,8 @@ public class ServicoService {
     public PaginaResponseDTO<ServicoResponseDTO> agenda(UUID unidadeId, Instant de, Instant ate,
                                                         String responsavel, Pageable pagina) {
         if (!de.isBefore(ate)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Período inválido");
-        return PaginaResponseDTO.de(servicos.agenda(unidadeId, de, ate,
+        var zona = java.time.ZoneId.of("America/Sao_Paulo");
+        return PaginaResponseDTO.de(servicos.agenda(unidadeId, de.atZone(zona).toLocalDate(), ate.atZone(zona).toLocalDate(),
                 responsavel == null || responsavel.isBlank() ? null : responsavel.strip(), pagina).map(this::resposta));
     }
 
@@ -78,11 +79,7 @@ public class ServicoService {
         var servico = obter(unidadeId, id);
         if (servico.getStatus() == StatusServico.CONCLUIDO || servico.getStatus() == StatusServico.CANCELADO)
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Serviço encerrado não pode ser agendado");
-        if (!dto.inicioPrevisto().isBefore(dto.fimPrevisto()))
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "O término deve ser posterior ao início");
-        if (servicos.contarConflitos(unidadeId, id, dto.responsavel().strip(), dto.inicioPrevisto(), dto.fimPrevisto()) > 0)
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Responsável já possui serviço nesse horário");
-        servico.agendar(dto.inicioPrevisto(), dto.fimPrevisto(), dto.responsavel().strip());
+        servico.agendar(dto.dataProgramada(), dto.responsavel().strip());
         return resposta(servico);
     }
 
@@ -134,6 +131,6 @@ public class ServicoService {
                 s.getContratante().getNomeFantasia() == null ? s.getContratante().getNomeRazaoSocial() : s.getContratante().getNomeFantasia(),
                 s.getOrcamento() == null ? null : s.getOrcamento().getId(), s.getTitulo(), s.getCategoria(),
                 s.getDescricao(), s.getResponsavel(), s.getEquipe(), s.getLocalExecucao(), s.getInicioPrevisto(),
-                s.getFimPrevisto(), s.getConcluidoEm(), s.getResumoConclusao(), s.getStatus());
+                s.getFimPrevisto(), s.getConcluidoEm(), s.getResumoConclusao(), s.getStatus(), s.getDataProgramada());
     }
 }

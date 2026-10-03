@@ -24,6 +24,7 @@ public class Servico extends Auditavel {
     @Column(name = "local_execucao", length = 500) private String localExecucao;
     @Column(name = "inicio_previsto") private Instant inicioPrevisto;
     @Column(name = "fim_previsto") private Instant fimPrevisto;
+    @Column(name = "data_programada") private java.time.LocalDate dataProgramada;
     @Column(name = "concluido_em") private Instant concluidoEm;
     @Column(name = "resumo_conclusao", length = 4000) private String resumoConclusao;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 30) private StatusServico status;
@@ -57,6 +58,14 @@ public class Servico extends Auditavel {
         this.responsavel = responsavel;
         this.status = StatusServico.AGENDADO;
     }
+    public void agendar(java.time.LocalDate dia, String responsavel) {
+        this.dataProgramada = dia;
+        this.inicioPrevisto = null;
+        this.fimPrevisto = null;
+        this.responsavel = responsavel;
+        this.status = StatusServico.AGENDADO;
+    }
+    public java.time.LocalDate getDataProgramada() { return dataProgramada; }
     public void alterarStatus(StatusServico novo, String resumo) {
         this.status = novo;
         if (novo == StatusServico.CONCLUIDO) {

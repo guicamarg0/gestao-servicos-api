@@ -16,7 +16,7 @@ import java.util.*;
 @Service public class ContratanteService {
     private final ContratanteRepository contratantes; private final UnidadeRepository unidades; private final ContratanteMapper mapper;
     public ContratanteService(ContratanteRepository contratantes, UnidadeRepository unidades, ContratanteMapper mapper) { this.contratantes = contratantes; this.unidades = unidades; this.mapper = mapper; }
-    @Transactional(readOnly = true) public PaginaResponseDTO<ContratanteResponseDTO> listar(UUID unidadeId, String busca, Pageable paginacao) { String termo = limparOpcional(busca); return PaginaResponseDTO.de(contratantes.buscar(unidadeId, termo == null ? "" : termo, paginacao).map(mapper::paraResponseDTO)); }
+    @Transactional(readOnly = true) public PaginaResponseDTO<ContratanteResponseDTO> listar(UUID unidadeId, String busca, Boolean ativo, Pageable paginacao) { String termo = limparOpcional(busca); return PaginaResponseDTO.de(contratantes.buscar(unidadeId, termo == null ? "" : termo, ativo, paginacao).map(mapper::paraResponseDTO)); }
     @Transactional(readOnly = true) public ContratanteResponseDTO consultar(UUID unidadeId, UUID id) { return mapper.paraResponseDTO(obter(unidadeId, id)); }
     @Transactional public ContratanteResponseDTO criar(UUID unidadeId, ContratanteRequestDTO dto) {
         validarTipoDocumento(dto.tipo(), dto.documento()); validarDocumentoUnico(unidadeId, dto.documento(), null);
@@ -29,6 +29,7 @@ import java.util.*;
         return mapper.paraResponseDTO(contratante);
     }
     @Transactional public void inativar(UUID unidadeId, UUID id) { obter(unidadeId, id).inativar(); }
+    @Transactional public void reativar(UUID unidadeId, UUID id) { obter(unidadeId, id).reativar(); }
     private Contratante obter(UUID unidadeId, UUID id) { return contratantes.findByIdAndUnidadeId(id, unidadeId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Contratante não encontrado")); }
     private void validarDocumentoUnico(UUID unidadeId, String documento, UUID id) { boolean existe = id == null ? contratantes.existsByUnidadeIdAndDocumento(unidadeId, documento) : contratantes.existsByUnidadeIdAndDocumentoAndIdNot(unidadeId, documento, id); if (existe) throw new DocumentoContratanteJaExisteException(); }
     private void validarTipoDocumento(TipoContratante tipo, String documento) { if ((tipo == TipoContratante.PF && documento.length() != 11) || (tipo == TipoContratante.PJ && documento.length() != 14)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "O documento não corresponde ao tipo de contratante"); }

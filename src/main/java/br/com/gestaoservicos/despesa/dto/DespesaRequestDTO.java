@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public record DespesaRequestDTO(@NotBlank @Size(max = 100) String categoria,
         @NotBlank @Size(max = 500) String descricao,
-        @NotNull @DecimalMin(value = "0.01") BigDecimal valor,
+        @DecimalMin(value = "0.01") @Digits(integer=13,fraction=2) BigDecimal valor,
         @NotNull LocalDate dataDespesa, UUID servicoId, UUID orcamentoId,
         @Size(max = 120) String responsavel, @Size(max = 1000) String comprovanteUrl,
-        boolean enviarParaAprovacao) {}
+        boolean enviarParaAprovacao, @Size(max=200) java.util.List<@NotNull @jakarta.validation.Valid ItemDespesaRequestDTO> itens) {}

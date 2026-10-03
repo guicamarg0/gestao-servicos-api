@@ -7,4 +7,4 @@ import java.util.UUID;
 public record ServicoResponseDTO(UUID id, String codigo, UUID contratanteId, String cliente,
         UUID orcamentoId, String titulo, String categoria, String descricao, String responsavel,
         String equipe, String localExecucao, Instant inicioPrevisto, Instant fimPrevisto,
-        Instant concluidoEm, String resumoConclusao, StatusServico status) {}
+        Instant concluidoEm, String resumoConclusao, StatusServico status, java.time.LocalDate dataProgramada) {}

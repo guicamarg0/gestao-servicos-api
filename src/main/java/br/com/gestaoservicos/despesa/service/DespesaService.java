@@ -29,27 +29,31 @@ public class DespesaService {
     }
     @Transactional(readOnly = true)
     public PaginaResponseDTO<DespesaResponseDTO> listar(UUID unidadeId, String busca, StatusDespesa status,
-            String categoria, LocalDate de, LocalDate ate, Pageable pagina) {
+            String categoria, LocalDate de, LocalDate ate, UUID servicoId, Pageable pagina) {
         return PaginaResponseDTO.de(despesas.buscar(unidadeId, busca == null ? "" : busca.strip(), status,
-                categoria == null || categoria.isBlank() ? null : categoria.strip(), de, ate, pagina).map(this::resposta));
+                categoria == null || categoria.isBlank() ? null : categoria.strip(), de, ate, servicoId, pagina).map(this::resposta));
     }
     @Transactional(readOnly = true)
     public DespesaResponseDTO consultar(UUID unidadeId, UUID id) { return resposta(obter(unidadeId, id)); }
     @Transactional
     public DespesaResponseDTO criar(UUID unidadeId, DespesaRequestDTO dto) {
+        var itens = itens(dto);
         var unidade = unidades.findById(unidadeId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         var despesa = new Despesa(unidade, servico(unidadeId, dto.servicoId()), orcamento(unidadeId, dto.orcamentoId()),
-                dto.categoria(), dto.descricao(), dto.valor(), dto.dataDespesa(), dto.responsavel(),
+                dto.categoria(), dto.descricao(), total(itens), dto.dataDespesa(), dto.responsavel(),
                 dto.comprovanteUrl(), dto.enviarParaAprovacao());
+        despesa.atualizarItens(itens);
         return resposta(despesas.save(despesa));
     }
     @Transactional
     public DespesaResponseDTO atualizar(UUID unidadeId, UUID id, DespesaRequestDTO dto) {
+        var itens = itens(dto);
         var despesa = obter(unidadeId, id);
         if (despesa.getStatus() != StatusDespesa.RASCUNHO && despesa.getStatus() != StatusDespesa.REJEITADA)
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Somente rascunho ou despesa rejeitada pode ser editada");
         despesa.atualizar(servico(unidadeId, dto.servicoId()), orcamento(unidadeId, dto.orcamentoId()),
-                dto.categoria(), dto.descricao(), dto.valor(), dto.dataDespesa(), dto.responsavel(), dto.comprovanteUrl());
+                dto.categoria(), dto.descricao(), total(itens), dto.dataDespesa(), dto.responsavel(), dto.comprovanteUrl());
+        despesa.atualizarItens(itens);
         if (dto.enviarParaAprovacao()) despesa.enviar();
         return resposta(despesa);
     }
@@ -89,6 +93,21 @@ public class DespesaService {
                 d.getDataDespesa(), d.getServico() == null ? null : d.getServico().getId(),
                 d.getServico() == null ? null : d.getServico().getCodigo(),
                 d.getOrcamento() == null ? null : d.getOrcamento().getId(), d.getResponsavel(),
-                d.getComprovanteUrl(), d.getStatus(), d.getComentarioDecisao(), d.getDecididoEm(), d.getDecididoPor());
+                d.getComprovanteUrl(), d.getStatus(), d.getComentarioDecisao(), d.getDecididoEm(), d.getDecididoPor(),
+                d.getItens().stream().map(i->new ItemDespesaResponseDTO(i.getDescricao(),i.getQuantidade(),i.getValorUnitario(),i.getTotal())).toList());
+    }
+    private java.util.List<ItemDespesa> itens(DespesaRequestDTO dto) {
+        java.util.List<ItemDespesa> itens;
+        if (dto.itens() == null || dto.itens().isEmpty()) {
+            if (dto.valor()==null || dto.valor().signum()<=0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Adicione os itens da despesa.");
+            itens=java.util.List.of(new ItemDespesa(dto.descricao(),java.math.BigDecimal.ONE,dto.valor()));
+        } else itens=dto.itens().stream().map(i->new ItemDespesa(i.descricao(),i.quantidade(),i.valorUnitario())).toList();
+        var total=total(itens);
+        if(total.signum()<=0 || total.compareTo(new java.math.BigDecimal("9999999999999.99"))>0)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Total da despesa fora do limite permitido.");
+        return itens;
+    }
+    private java.math.BigDecimal total(java.util.List<ItemDespesa> itens) {
+        return itens.stream().map(ItemDespesa::getTotal).reduce(java.math.BigDecimal.ZERO,java.math.BigDecimal::add);
     }
 }

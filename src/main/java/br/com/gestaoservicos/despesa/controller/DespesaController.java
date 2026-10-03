@@ -24,8 +24,9 @@ public class DespesaController {
     public PaginaResponseDTO<DespesaResponseDTO> listar(@RequestParam(required = false) String busca,
             @RequestParam(required = false) StatusDespesa status, @RequestParam(required = false) String categoria,
             @RequestParam(required = false) LocalDate de, @RequestParam(required = false) LocalDate ate,
+            @RequestParam(required = false) UUID servicoId,
             @PageableDefault(sort = "dataDespesa") Pageable pagina) {
-        return service.listar(unidade(), busca, status, categoria, de, ate, pagina);
+        return service.listar(unidade(), busca, status, categoria, de, ate, servicoId, pagina);
     }
     @GetMapping("/{id}") @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR','OPERADOR','CONSULTA')")
     public DespesaResponseDTO consultar(@PathVariable UUID id) { return service.consultar(unidade(), id); }

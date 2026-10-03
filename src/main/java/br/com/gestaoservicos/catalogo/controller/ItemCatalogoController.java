@@ -24,5 +24,6 @@ public class ItemCatalogoController {
     @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN', 'GESTOR', 'OPERADOR')") public ItemCatalogoResponseDTO criar(@Valid @RequestBody ItemCatalogoRequestDTO dto) { return service.criar(unidadeIdAtual(), dto); }
     @PutMapping("/{id}") @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN', 'GESTOR', 'OPERADOR')") public ItemCatalogoResponseDTO atualizar(@PathVariable UUID id, @Valid @RequestBody ItemCatalogoRequestDTO dto) { return service.atualizar(unidadeIdAtual(), id, dto); }
     @PatchMapping("/{id}/inativar") @ResponseStatus(HttpStatus.NO_CONTENT) @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN', 'GESTOR')") public void inativar(@PathVariable UUID id) { service.inativar(unidadeIdAtual(), id); }
+    @PatchMapping("/{id}/reativar") @ResponseStatus(HttpStatus.NO_CONTENT) @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN', 'GESTOR')") public void reativar(@PathVariable UUID id) { service.reativar(unidadeIdAtual(), id); }
     private UUID unidadeIdAtual() { return ContextoUnidade.atual().map(ContextoUnidade.Selecao::unidadeId).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecione uma unidade pelo cabeçalho X-Unidade-Id")); }
 }

@@ -23,6 +23,10 @@ class ContratanteIntegrationTest {
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CONTRATANTE_DOCUMENTO_JA_EXISTE"));
         mvc.perform(patch("/api/v1/contratantes/{id}/inativar", id).header("Authorization", "Bearer " + token).header("X-Unidade-Id", unidade)).andExpect(status().isNoContent());
         mvc.perform(get("/api/v1/contratantes/{id}", id).header("Authorization", "Bearer " + token).header("X-Unidade-Id", unidade)).andExpect(status().isOk()).andExpect(jsonPath("$.ativo").value(false));
+        mvc.perform(get("/api/v1/contratantes").param("ativo","true").header("Authorization","Bearer "+token).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andExpect(jsonPath("$.totalElementos").value(0));
+        mvc.perform(get("/api/v1/contratantes").param("ativo","false").header("Authorization","Bearer "+token).header("X-Unidade-Id",unidade)).andExpect(status().isOk()).andExpect(jsonPath("$.totalElementos").value(1));
+        mvc.perform(patch("/api/v1/contratantes/{id}/reativar",id).header("Authorization","Bearer "+token).header("X-Unidade-Id",unidade)).andExpect(status().isNoContent());
+        mvc.perform(get("/api/v1/contratantes/{id}", id).header("Authorization", "Bearer " + token).header("X-Unidade-Id", unidade)).andExpect(status().isOk()).andExpect(jsonPath("$.ativo").value(true));
     }
     @Test void bloqueiaAcessoCruzadoEAceitaMesmoDocumentoEmOutraUnidade() throws Exception {
         String tokenAlice = autenticar("Alice Cliente", "alice.cliente@example.com"); UUID unidadeAlice = criarUnidade(tokenAlice, "Unidade Alice Cliente"); UUID id = criar(tokenAlice, unidadeAlice, "12345678901", "Cliente Alice");

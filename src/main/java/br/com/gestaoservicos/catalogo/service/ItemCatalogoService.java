@@ -30,6 +30,7 @@ public class ItemCatalogoService {
         return mapper.paraResponseDTO(item);
     }
     @Transactional public void inativar(UUID unidadeId, UUID id) { obter(unidadeId, id).inativar(); }
+    @Transactional public void reativar(UUID unidadeId, UUID id) { obter(unidadeId, id).reativar(); }
     /** Ponto de entrada para composição de novos orçamentos: históricos continuam referenciando itens inativos, mas novos usos são recusados. */
     @Transactional(readOnly = true) public ItemCatalogo obterAtivoParaNovoOrcamento(UUID unidadeId, UUID id) {
         ItemCatalogo item = obter(unidadeId, id);

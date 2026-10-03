@@ -29,7 +29,7 @@ public class ServicoController {
     @GetMapping("/agenda")
     @PreAuthorize("@autorizacaoUnidade.possuiAlgumPerfil('ADMIN','GESTOR','OPERADOR','CONSULTA')")
     public PaginaResponseDTO<ServicoResponseDTO> agenda(@RequestParam Instant de, @RequestParam Instant ate,
-            @RequestParam(required = false) String responsavel, @PageableDefault(sort = "inicioPrevisto") Pageable pagina) {
+            @RequestParam(required = false) String responsavel, @PageableDefault(sort = "dataProgramada") Pageable pagina) {
         return service.agenda(unidade(), de, ate, responsavel, pagina);
     }
     @GetMapping("/servicos/{id}")

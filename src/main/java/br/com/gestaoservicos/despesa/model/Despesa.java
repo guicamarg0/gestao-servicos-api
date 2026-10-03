@@ -28,6 +28,10 @@ public class Despesa extends Auditavel {
     @Column(name = "decidido_em") private Instant decididoEm;
     @Column(name = "decidido_por") private UUID decididoPor;
     @Version @Column(name = "versao") private long versao;
+    @ElementCollection
+    @CollectionTable(name="despesa_item",joinColumns=@JoinColumn(name="despesa_id"))
+    @OrderColumn(name="ordem")
+    private java.util.List<ItemDespesa> itens = new java.util.ArrayList<>();
 
     protected Despesa() {}
     public Despesa(Unidade unidade, Servico servico, Orcamento orcamento, String categoria, String descricao,
@@ -50,6 +54,11 @@ public class Despesa extends Auditavel {
         this.comprovanteUrl = comprovanteUrl;
     }
     public void enviar() { status = StatusDespesa.PENDENTE; comentarioDecisao = null; decididoEm = null; decididoPor = null; }
+    public void atualizarItens(java.util.List<ItemDespesa> novos) {
+        itens.clear();itens.addAll(novos);
+        valor = itens.stream().map(ItemDespesa::getTotal).reduce(BigDecimal.ZERO,BigDecimal::add);
+    }
+    public java.util.List<ItemDespesa> getItens() { return itens; }
     public void decidir(StatusDespesa decisao, String comentario, UUID usuarioId) {
         status = decisao;
         comentarioDecisao = comentario;

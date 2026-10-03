@@ -28,5 +28,6 @@ public class ItemCatalogo extends Auditavel {
         this.tipo = tipo; this.nome = nome; this.descricao = descricao; this.unidadeMedida = unidadeMedida; this.unidadeMedidaPersonalizada = unidadeMedidaPersonalizada; this.valorPadrao = valorPadrao; this.codigoReferencia = codigoReferencia;
     }
     public void inativar() { this.ativo = false; }
+    public void reativar() { this.ativo = true; }
     public UUID getId() { return id; } public TipoItemCatalogo getTipo() { return tipo; } public String getNome() { return nome; } public String getDescricao() { return descricao; } public UnidadeMedida getUnidadeMedida() { return unidadeMedida; } public String getUnidadeMedidaPersonalizada() { return unidadeMedidaPersonalizada; } public BigDecimal getValorPadrao() { return valorPadrao; } public String getCodigoReferencia() { return codigoReferencia; } public boolean isAtivo() { return ativo; }
 }

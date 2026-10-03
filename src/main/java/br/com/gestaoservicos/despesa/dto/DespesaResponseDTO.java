@@ -9,4 +9,4 @@ import java.util.UUID;
 public record DespesaResponseDTO(UUID id, String codigo, String categoria, String descricao,
         BigDecimal valor, LocalDate dataDespesa, UUID servicoId, String servicoCodigo, UUID orcamentoId,
         String responsavel, String comprovanteUrl, StatusDespesa status,
-        String comentarioDecisao, Instant decididoEm, UUID decididoPor) {}
+        String comentarioDecisao, Instant decididoEm, UUID decididoPor, java.util.List<ItemDespesaResponseDTO> itens) {}
