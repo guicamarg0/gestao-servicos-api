@@ -30,6 +30,29 @@ class OrcamentoIntegrationTest {
     @Autowired RevisaoOrcamentoRepository revisoes;
 
     @Test
+    void baixaPdfDoRascunhoSemEmitirERefleteEdicoes() throws Exception {
+        String token=login("orcamento.rascunho.pdf@test.com");
+        UUID unidade=unidade(token,"Unidade PDF Rascunho");
+        UUID id=criarRascunho(token,unidade,10);
+        String rota="/api/v1/orcamentos/{id}/revisoes/1/pdf";
+        byte[] primeiro=mvc.perform(get(rota,id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade))
+            .andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_PDF)).andReturn().getResponse().getContentAsByteArray();
+        try(var doc=Loader.loadPDF(primeiro)){assertThat(new PDFTextStripper().getText(doc)).contains("Visita", "10,00");}
+        mvc.perform(put("/api/v1/orcamentos/{id}",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade)
+            .contentType(MediaType.APPLICATION_JSON).content(corpoRascunho(20))).andExpect(status().isOk());
+        byte[] segundo=mvc.perform(get(rota,id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        try(var doc=Loader.loadPDF(segundo)){assertThat(new PDFTextStripper().getText(doc)).contains("20,00");}
+        mvc.perform(get("/api/v1/orcamentos/{id}",id).header("Authorization",bearer(token)).header("X-Unidade-Id",unidade))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("RASCUNHO"))
+            .andExpect(jsonPath("$.revisaoAtual").value(1)).andExpect(jsonPath("$.historico.length()").value(2));
+        assertThat(revisoes.findByOrcamentoIdAndNumeroRevisao(id,1).orElseThrow().getContratadoSnapshot()).isNull();
+        String outro=login("orcamento.rascunho.pdf.outra@test.com");
+        UUID outra=unidade(outro,"Outra unidade PDF Rascunho");
+        mvc.perform(get(rota,id).header("Authorization",bearer(outro)).header("X-Unidade-Id",outra)).andExpect(status().isNotFound());
+    }
+
+    @Test
     void emiteEAbreNovaRevisao() throws Exception {
         String token = login("orcamento.fluxo@test.com");
         UUID unidade = unidade(token, "Unidade Fluxo Orcamento");
